@@ -1,0 +1,1497 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>미국 주식 백테스터</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  color-scheme: light;
+  --bg:#eef1f5;
+  --surface:#ffffff;
+  --surface-2:#eef1f5;
+  --ink:#12151c;
+  --ink-2:#4b5563;
+  --muted:#8a94a3;
+  --border:rgba(15,20,30,0.11);
+  --border-strong:rgba(15,20,30,0.18);
+  --accent:#2c6e49;
+  --accent-ink:#ffffff;
+  --accent-soft:#dcecdf;
+  --up:#c93a37;
+  --down:#2a78d6;
+  --cat-1:#2a78d6;
+  --cat-2:#eb6834;
+  --cat-3:#1baf7a;
+  --good:#0ca30c;
+  --warning:#a06400;
+  --serious:#ec835a;
+  --critical:#d03b3b;
+  --shadow: 0 1px 2px rgba(15,20,30,0.06), 0 8px 24px -12px rgba(15,20,30,0.18);
+  --font-sans: "IBM Plex Sans KR", "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --bg:#0a0d13;
+    --surface:#131826;
+    --surface-2:#1a2032;
+    --ink:#eef1f6;
+    --ink-2:#b7c0cd;
+    --muted:#7c8697;
+    --border:rgba(255,255,255,0.10);
+    --border-strong:rgba(255,255,255,0.18);
+    --accent:#4fae7d;
+    --accent-ink:#0b1710;
+    --accent-soft:#173a26;
+    --up:#e5726f;
+    --down:#5b9de8;
+    --cat-1:#3987e5;
+    --cat-2:#d95926;
+    --cat-3:#199e70;
+    --good:#3ecb3e;
+    --warning:#e6b23d;
+    --serious:#ec835a;
+    --critical:#e66767;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 28px -14px rgba(0,0,0,0.6);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#0a0d13;
+  --surface:#131826;
+  --surface-2:#1a2032;
+  --ink:#eef1f6;
+  --ink-2:#b7c0cd;
+  --muted:#7c8697;
+  --border:rgba(255,255,255,0.10);
+  --border-strong:rgba(255,255,255,0.18);
+  --accent:#4fae7d;
+  --accent-ink:#0b1710;
+  --accent-soft:#173a26;
+  --up:#e5726f;
+  --down:#5b9de8;
+  --cat-1:#3987e5;
+  --cat-2:#d95926;
+  --cat-3:#199e70;
+  --good:#3ecb3e;
+  --warning:#e6b23d;
+  --serious:#ec835a;
+  --critical:#e66767;
+  --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 28px -14px rgba(0,0,0,0.6);
+}
+
+*{box-sizing:border-box;}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--font-sans);
+  padding-inline:16px;
+  padding-block:28px 48px;
+}
+.page{max-width:1160px;margin:0 auto;display:flex;flex-direction:column;gap:20px;}
+
+h1,h2,h3{text-wrap:balance;margin:0;}
+::selection{background:var(--accent-soft);}
+a{color:var(--cat-1);}
+button{font-family:inherit;}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px;}
+
+.crosslink{
+  display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;
+  color:var(--ink-2);text-decoration:none;border:1px solid var(--border-strong);
+  border-radius:999px;padding:6px 12px;background:var(--surface);width:fit-content;
+}
+.crosslink:hover{background:var(--surface-2);}
+
+.eyebrow{font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--accent);}
+.hero h1{font-size:clamp(24px,4vw,32px);font-weight:700;margin-top:6px;}
+.hero p{color:var(--ink-2);font-size:15px;line-height:1.6;max-width:64ch;margin-top:10px;}
+
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;box-shadow:var(--shadow);}
+.panel h2{font-size:16px;font-weight:600;}
+.panel > h2{margin-bottom:14px;}
+
+.controls{display:flex;flex-direction:column;gap:16px;}
+.control-row{display:flex;flex-wrap:wrap;gap:20px;}
+.control-group{display:flex;flex-direction:column;gap:8px;flex:1 1 220px;min-width:0;}
+.control-group label{font-size:12px;font-weight:600;color:var(--ink-2);}
+.control-group .hint{font-size:11.5px;color:var(--muted);margin-top:-4px;}
+
+.segmented{display:flex;border:1px solid var(--border-strong);border-radius:10px;overflow:hidden;}
+.segmented button{flex:1;border:none;background:transparent;color:var(--ink-2);padding:9px 10px;font-size:13px;cursor:pointer;transition:background .15s,color .15s;border-right:1px solid var(--border);}
+.segmented button:last-child{border-right:none;}
+.segmented button:hover{background:var(--surface-2);}
+.segmented button.active{background:var(--accent);color:var(--accent-ink);font-weight:600;}
+
+select{
+  appearance:none;-webkit-appearance:none;background:var(--surface-2);color:var(--ink);
+  border:1px solid var(--border-strong);border-radius:10px;padding:9px 34px 9px 12px;
+  font-size:13px;font-family:var(--font-mono);cursor:pointer;
+  background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);
+  background-position:calc(100% - 18px) 55%, calc(100% - 13px) 55%;background-size:5px 5px,5px 5px;background-repeat:no-repeat;
+}
+
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+.stat-tile{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:4px;}
+.stat-tile .label{font-size:12px;color:var(--muted);font-weight:600;}
+.stat-tile .value{font-family:var(--font-mono);font-size:clamp(18px,2.6vw,24px);font-weight:600;font-variant-numeric:tabular-nums;}
+.stat-tile .sub{font-size:11.5px;color:var(--ink-2);}
+.stat-tile .sub.up{color:var(--up);}
+.stat-tile .sub.down{color:var(--down);}
+
+.chart-header{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:10px;}
+.legend{display:flex;gap:14px;flex-wrap:wrap;}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ink-2);}
+.legend-swatch{width:14px;height:3px;border-radius:2px;}
+.chart-wrap{position:relative;width:100%;}
+#equityChart{width:100%;height:auto;display:block;overflow:visible;}
+.chart-tooltip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--border-strong);border-radius:10px;padding:9px 12px;font-size:12px;box-shadow:var(--shadow);white-space:nowrap;transform:translate(-50%,-115%);z-index:5;font-family:var(--font-mono);}
+.chart-tooltip .tt-date{font-family:var(--font-sans);font-weight:600;color:var(--ink);margin-bottom:4px;font-size:12px;}
+.chart-tooltip .tt-row{display:flex;justify-content:space-between;gap:14px;}
+.chart-tooltip .tt-row .k{color:var(--ink-2);}
+.scale-note{font-size:11.5px;color:var(--muted);margin-top:8px;}
+
+.two-col{display:grid;grid-template-columns:1.1fr 1.4fr;gap:20px;align-items:start;}
+
+.holding-mode{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;margin-bottom:12px;}
+.holding-mode.offensive{background:var(--accent-soft);color:var(--accent);}
+.holding-mode.defensive{background:rgba(160,100,0,0.14);color:var(--warning);}
+.holding-mode .dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
+.holding-list{display:flex;flex-direction:column;gap:10px;}
+.sector-block{border:1px solid var(--border);border-radius:10px;padding:10px 12px;background:var(--surface-2);}
+.sector-block .sector-name{font-size:12px;font-weight:700;color:var(--accent);margin-bottom:8px;text-transform:uppercase;letter-spacing:.03em;}
+.holding-card{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0;}
+.holding-card + .holding-card{border-top:1px dashed var(--border);}
+.holding-card .name{font-size:13.5px;font-weight:600;}
+.holding-card .code{font-family:var(--font-mono);font-size:11.5px;color:var(--muted);}
+.holding-card .weight{font-family:var(--font-mono);font-size:13.5px;font-weight:600;color:var(--accent);}
+.holding-asof{font-size:11.5px;color:var(--muted);margin-top:12px;}
+
+.table-scroll{overflow-x:auto;border:1px solid var(--border);border-radius:10px;}
+table{border-collapse:collapse;width:100%;font-size:12.5px;min-width:560px;}
+thead th{position:sticky;top:0;background:var(--surface-2);text-align:left;padding:9px 12px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border-strong);white-space:nowrap;}
+tbody td{padding:8px 12px;border-bottom:1px solid var(--border);vertical-align:top;}
+tbody tr:last-child td{border-bottom:none;}
+tbody tr:hover{background:var(--surface-2);}
+td.mono, th.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;}
+.ret-up{color:var(--up);font-family:var(--font-mono);font-variant-numeric:tabular-nums;}
+.ret-down{color:var(--down);font-family:var(--font-mono);font-variant-numeric:tabular-nums;}
+.tag{display:inline-block;font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:6px;background:var(--surface-2);color:var(--ink-2);white-space:nowrap;}
+.tag.safe{background:rgba(160,100,0,0.14);color:var(--warning);}
+.tag.eligible{background:var(--accent-soft);color:var(--accent);}
+.log-table-wrap{max-height:420px;overflow-y:auto;}
+.rank-num{font-family:var(--font-mono);color:var(--muted);width:20px;display:inline-block;}
+
+.notes{border:1px dashed var(--border-strong);border-radius:14px;padding:18px 20px;background:transparent;}
+.notes h3{font-size:13px;color:var(--ink-2);margin-bottom:10px;}
+.notes ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:7px;}
+.notes li{font-size:12.5px;color:var(--ink-2);line-height:1.55;}
+
+.topbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;}
+.tabs{display:inline-flex;gap:4px;padding:4px;border-radius:12px;background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow);}
+.tabs button{border:none;background:transparent;color:var(--ink-2);font-size:13.5px;font-weight:600;padding:8px 16px;border-radius:9px;cursor:pointer;}
+.tabs button:hover{background:var(--surface-2);}
+.tabs button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink);}
+.tab-pane{display:flex;flex-direction:column;gap:20px;}
+.tab-pane[hidden]{display:none;}
+.two-col.even{grid-template-columns:1fr 1fr;}
+@media (max-width:760px){ .two-col.even{grid-template-columns:1fr;} }
+
+.stat-tile .value.up{color:var(--up);}
+.stat-tile .value.down{color:var(--down);}
+.stat-tile .value.text{font-family:var(--font-sans);font-size:clamp(16px,2.2vw,20px);}
+.panel-sub{font-size:12px;color:var(--muted);margin:-8px 0 14px;}
+
+.dbars{display:flex;flex-direction:column;gap:2px;}
+.dbar-row{display:grid;grid-template-columns:minmax(92px,128px) 1fr 64px;align-items:center;gap:10px;padding:5px 4px;border-radius:6px;cursor:default;}
+.dbar-row:hover{background:var(--surface-2);}
+.dbar-name{font-size:13px;font-weight:600;line-height:1.2;}
+.dbar-name .code{display:block;font-family:var(--font-mono);font-size:10.5px;font-weight:500;color:var(--muted);}
+.dbar-track{position:relative;height:16px;}
+.dbar-track::before{content:"";position:absolute;left:50%;top:-4px;bottom:-4px;width:1px;background:var(--border-strong);}
+.dbar-fill{position:absolute;top:2px;height:12px;}
+.dbar-fill.up{left:50%;background:var(--up);border-radius:0 4px 4px 0;}
+.dbar-fill.down{right:50%;background:var(--down);border-radius:4px 0 0 4px;}
+.dbar-val{font-family:var(--font-mono);font-size:12.5px;font-weight:600;text-align:right;font-variant-numeric:tabular-nums;}
+.dbar-val .sub{display:block;font-size:10.5px;font-weight:500;color:var(--muted);}
+
+.spark-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;}
+.spark-card{border:1px solid var(--border);border-radius:12px;padding:12px 14px 10px;background:var(--surface-2);display:flex;flex-direction:column;gap:2px;min-width:0;}
+.spark-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;}
+.spark-head .nm{font-size:13px;font-weight:600;}
+.spark-head .cd{font-family:var(--font-mono);font-size:10.5px;color:var(--muted);}
+.spark-now{font-family:var(--font-mono);font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;}
+.spark-delta{font-family:var(--font-mono);font-size:12px;font-weight:600;}
+.spark-delta.up{color:var(--up);} .spark-delta.down{color:var(--down);} .spark-delta.flat{color:var(--muted);}
+.spark-card svg{width:100%;height:64px;display:block;margin-top:6px;overflow:visible;touch-action:pan-y;}
+.spark-range{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:10px;color:var(--muted);}
+
+.heat-table{min-width:720px;}
+.heat-table th,.heat-table td{text-align:center;padding:6px 4px;}
+.heat-table thead th{text-transform:none;letter-spacing:0;}
+.heat-table td.date{font-family:var(--font-mono);font-size:11.5px;color:var(--ink-2);text-align:left;padding-left:12px;white-space:nowrap;}
+.heat-table td.cell{font-family:var(--font-mono);font-size:11.5px;font-variant-numeric:tabular-nums;color:var(--ink);border:2px solid var(--surface);border-radius:6px;}
+.heat-table tbody tr:hover{background:transparent;}
+.heat-table tr.sel td.date{color:var(--ink);font-weight:700;}
+.heat-scale{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--muted);margin-top:10px;flex-wrap:wrap;}
+.heat-scale .bar{width:160px;height:8px;border-radius:4px;background:linear-gradient(90deg,var(--down),var(--surface-2),var(--up));border:1px solid var(--border);}
+
+.dbar-row,.spark-card{cursor:pointer;}
+.dbar-row:focus-visible,.spark-card:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+.spark-card:hover{border-color:var(--border-strong);}
+
+.sector-dialog{border:1px solid var(--border-strong);border-radius:16px;padding:0;background:var(--surface);color:var(--ink);box-shadow:var(--shadow);width:min(540px,calc(100vw - 32px));max-height:calc(100vh - 48px);font-family:var(--font-sans);}
+.sector-dialog::backdrop{background:rgba(10,13,19,0.45);}
+.sd-inner{padding:18px 20px 16px;display:flex;flex-direction:column;gap:12px;}
+.sd-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;}
+.sd-context{font-size:11.5px;font-weight:600;color:var(--accent);letter-spacing:.02em;}
+.sd-head h3{font-size:18px;font-weight:700;margin-top:4px;}
+.sd-head h3 .code{font-family:var(--font-mono);font-size:13px;font-weight:500;color:var(--muted);margin-left:6px;}
+.sd-close{border:1px solid var(--border-strong);background:var(--surface-2);color:var(--ink-2);width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:14px;flex:none;}
+.sd-close:hover{color:var(--ink);}
+.sd-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.sd-summary .cell{background:var(--surface-2);border-radius:10px;padding:8px 10px;}
+.sd-summary .k{font-size:11px;color:var(--muted);font-weight:600;}
+.sd-summary .v{font-family:var(--font-mono);font-size:14px;font-weight:600;margin-top:2px;font-variant-numeric:tabular-nums;}
+.sd-summary .s{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;}
+.sd-summary .s.ret-up{color:var(--up);font-family:var(--font-sans);}
+.sd-summary .s.ret-down{color:var(--down);font-family:var(--font-sans);}
+.sd-table .sub{font-family:var(--font-sans);}
+.sd-table{min-width:0;}
+.sd-table td{vertical-align:middle;}
+.sd-table .sym{font-family:var(--font-mono);font-weight:600;font-size:13px;}
+.sd-table .nm{display:block;font-size:11px;color:var(--muted);max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sd-wbar{height:4px;border-radius:2px;background:var(--accent);margin-top:4px;opacity:.75;}
+.sd-table .sub{display:block;font-size:10.5px;color:var(--muted);}
+.sd-note{font-size:11.5px;color:var(--muted);line-height:1.5;margin:0;}
+@media (max-width:480px){ .sd-summary{grid-template-columns:1fr 1fr;} .sd-table .nm{max-width:110px;} }
+
+.float-tip{position:fixed;pointer-events:none;background:var(--surface);border:1px solid var(--border-strong);border-radius:10px;padding:8px 11px;font-size:12px;box-shadow:var(--shadow);z-index:20;font-family:var(--font-mono);white-space:nowrap;}
+.float-tip .tt-date{font-family:var(--font-sans);font-weight:600;margin-bottom:3px;}
+.float-tip .tt-row{display:flex;justify-content:space-between;gap:14px;}
+.float-tip .tt-row .k{color:var(--ink-2);}
+
+@media (max-width:760px){
+  .two-col{grid-template-columns:1fr;}
+  .stats-row{grid-template-columns:repeat(2,1fr);}
+}
+@media (max-width:480px){
+  .stats-row{grid-template-columns:1fr 1fr;}
+  .stat-tile .value{font-size:17px;}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none !important;animation:none !important;}
+}
+
+:root{ --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#008300; --s7:#6250d6; --s8:#e34948; }
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767; }
+}
+:root[data-theme="dark"]{ --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767; }
+
+.topbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;}
+.tabs{display:inline-flex;gap:4px;padding:4px;border-radius:12px;background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow);flex-wrap:wrap;}
+.tabs button,.tabs a{border:none;background:transparent;color:var(--ink-2);font-size:13.5px;font-weight:600;padding:8px 16px;border-radius:9px;cursor:pointer;text-decoration:none;font-family:inherit;}
+.tabs button:hover,.tabs a:hover{background:var(--surface-2);}
+.tabs button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink);}
+.tab-pane{display:flex;flex-direction:column;gap:20px;}
+.tab-pane[hidden]{display:none;}
+.updated{font-size:12px;color:var(--muted);}
+.load-error{color:var(--critical);}
+
+.ticker-entry{display:flex;gap:8px;flex-wrap:wrap;}
+.ticker-entry input{flex:1 1 220px;min-width:0;background:var(--surface-2);color:var(--ink);border:1px solid var(--border-strong);border-radius:10px;padding:9px 12px;font-size:14px;font-family:var(--font-mono);}
+.btn{border:1px solid var(--border-strong);background:var(--surface-2);color:var(--ink);border-radius:10px;padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;}
+.btn:hover{border-color:var(--accent);}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);}
+.btn.small{padding:5px 10px;font-size:12px;border-radius:8px;}
+.presets{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+.presets .lbl{font-size:12px;color:var(--muted);margin-right:2px;}
+.entry-msg{font-size:12px;color:var(--warning);min-height:16px;}
+.chips{display:flex;gap:8px;flex-wrap:wrap;}
+.chip{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--border-strong);border-radius:999px;padding:5px 6px 5px 10px;background:var(--surface);font-size:13px;}
+.chip .sw{width:10px;height:10px;border-radius:50%;flex:none;}
+.chip .tk{font-family:var(--font-mono);font-weight:600;}
+.chip .nm{color:var(--muted);font-size:11.5px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.chip input{width:58px;background:var(--surface-2);color:var(--ink);border:1px solid var(--border-strong);border-radius:6px;padding:3px 6px;font-family:var(--font-mono);font-size:12.5px;text-align:right;}
+.chip .x{border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:14px;width:24px;height:24px;border-radius:50%;}
+.chip .x:hover{background:var(--surface-2);color:var(--ink);}
+.chips-empty{font-size:13px;color:var(--muted);}
+.weight-sum{font-size:12px;color:var(--ink-2);}
+.range-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.range-row select{min-width:120px;}
+.cmp-notes{font-size:12px;color:var(--warning);display:flex;flex-direction:column;gap:4px;}
+.cmp-notes:empty{display:none;}
+#pane-compare .controls > .control-group{flex:none;}
+.control-group[hidden]{display:none;}
+
+#cmpChart,#ddChart{width:100%;height:auto;display:block;overflow:visible;touch-action:pan-y;}
+.chart-sub{font-size:12px;color:var(--muted);margin:-6px 0 10px;}
+.legend-swatch.dash{background:repeating-linear-gradient(90deg,var(--ink-2) 0 4px,transparent 4px 7px)!important;}
+.stat-table td.num,.stat-table th.num{text-align:right;font-family:var(--font-mono);font-variant-numeric:tabular-nums;white-space:nowrap;}
+.stat-table td.name{white-space:nowrap;}
+.stat-table .sw{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px;}
+.stat-table tr.bench td{color:var(--ink-2);}
+.stat-table tr.port td{font-weight:600;}
+.yr-table td.num,.yr-table th.num{text-align:right;font-family:var(--font-mono);font-variant-numeric:tabular-nums;}
+
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="topbar">
+    <div class="tabs" role="tablist" aria-label="화면 선택">
+      <button type="button" role="tab" data-tab="rotation" aria-selected="true">섹터 로테이션</button>
+      <button type="button" role="tab" data-tab="compare" aria-selected="false">종목 비교 백테스트</button>
+      <a href="../sector/">섹터 데일리 ↗</a>
+    </div>
+    <a class="crosslink" href="https://claude.ai/artifact/6Jpkxx2pSVA3BBqYL6Nsxf">🇰🇷 한국 ETF 로테이션 백테스터 →</a>
+  </div>
+  <div class="updated" id="updatedAt">데이터 불러오는 중…</div>
+  <div class="tab-pane" id="pane-rotation">
+  <header class="hero">
+    <div class="eyebrow">GICS 11개 섹터 · 123개 미국 종목 · 월간 리밸런싱</div>
+    <h1>미국 섹터 종목 백테스터</h1>
+    <p>GICS 11개 섹터의 대표 대형주(섹터당 상위 10종목) + 안전자산 4종 실제 월봉 데이터로, 매월 모멘텀이 가장 강한 상위 섹터를 고르고 그 안에서 다시 상위 종목을 골라 리밸런싱하는 2단계 로테이션 전략을 백테스트합니다. 몇 개 섹터, 섹터당 몇 종목이 최적인지 직접 비교해보세요.</p>
+  </header>
+
+  <section class="panel controls" aria-label="전략 설정">
+    <div class="control-row">
+      <div class="control-group">
+        <label>모멘텀 스코어 산출 방식</label>
+        <div class="segmented" data-control="weight" role="group">
+          <button data-value="vaa" class="active" type="button">VAA 고전식 (12·4·2·1)</button>
+          <button data-value="equal3" type="button">3·6·12개월 균등</button>
+          <button data-value="m12" type="button">단순 12개월</button>
+        </div>
+      </div>
+      <div class="control-group">
+        <label for="topSectors">편입 섹터 수</label>
+        <select id="topSectors"></select>
+        <span class="hint">섹터 점수 = 그 섹터 후보 종목들의 모멘텀 평균</span>
+      </div>
+      <div class="control-group">
+        <label>섹터당 편입 종목 수</label>
+        <div class="segmented" data-control="topn" role="group">
+          <button data-value="1" class="active" type="button">1</button>
+          <button data-value="2" type="button">2</button>
+          <button data-value="3" type="button">3</button>
+          <button data-value="4" type="button">4</button>
+          <button data-value="5" type="button">5</button>
+        </div>
+      </div>
+      <div class="control-group">
+        <label>섹터 내 비중 배분</label>
+        <div class="segmented" data-control="weightMode" role="group">
+          <button data-value="equal" class="active" type="button">균등가중</button>
+          <button data-value="cap" type="button">시가총액 비례</button>
+        </div>
+        <span class="hint">시가총액 비례는 현재 발행주식수 × 그 시점 주가로 근사 계산 (섹터당 종목 1개일 땐 두 방식 동일)</span>
+      </div>
+      <div class="control-group">
+        <label>방어자산 편입 종목 수</label>
+        <div class="segmented" data-control="safen" role="group">
+          <button data-value="1" class="active" type="button">1종목</button>
+          <button data-value="2" type="button">2종목</button>
+        </div>
+        <span class="hint">모든 섹터가 마이너스 모멘텀일 때만 발동 (BIL·SHY·TLT·GLD)</span>
+      </div>
+      <div class="control-group">
+        <label for="startMonth">백테스트 시작월</label>
+        <select id="startMonth"></select>
+      </div>
+    </div>
+  </section>
+
+  <section class="stats-row" aria-label="핵심 성과 지표">
+    <div class="stat-tile"><span class="label">최종 잔고</span><span class="value" id="statFinal">–</span><span class="sub">시작 $10,000</span></div>
+    <div class="stat-tile"><span class="label">연복리수익률(CAGR)</span><span class="value" id="statCagr">–</span><span class="sub" id="statMonths">–</span></div>
+    <div class="stat-tile"><span class="label">최대낙폭(MDD)</span><span class="value" id="statMdd">–</span><span class="sub">월말 기준 계산</span></div>
+    <div class="stat-tile"><span class="label">SPY 대비</span><span class="value" id="statVsSpy">–</span><span class="sub" id="statVsSpySub">CAGR 차이</span></div>
+  </section>
+
+  <section class="panel chart-card">
+    <div class="chart-header">
+      <h2>누적 성과 ($10,000 시작, 로그 스케일)</h2>
+      <div class="legend" id="chartLegend"></div>
+    </div>
+    <div class="chart-wrap">
+      <svg id="equityChart" viewBox="0 0 960 340" preserveAspectRatio="xMidYMid meet" role="img" aria-label="전략과 SPY·QQQ 벤치마크 비교 라인 차트"></svg>
+      <div class="chart-tooltip" id="chartTooltip" hidden></div>
+    </div>
+    <div class="scale-note">※ y축은 로그 스케일입니다 — 배수 간격이 동일한 높이로 표시됩니다.</div>
+  </section>
+
+  <section class="two-col">
+    <div class="panel">
+      <h2>최근 리밸런싱 구성</h2>
+      <div id="currentHoldings"></div>
+    </div>
+    <div class="panel">
+      <h2>이번 달 섹터 모멘텀 순위</h2>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>#</th><th>섹터</th><th class="mono">모멘텀 점수</th><th>상태</th></tr></thead>
+          <tbody id="sectorRankBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>종목 유니버스 (<span id="universeCount">123</span>종목 · 산업재 섹터에 2026년 신규상장 SPCX 포함)</h2>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th class="mono">티커</th><th>분류</th><th class="mono">데이터 시작</th><th>상태</th></tr></thead>
+        <tbody id="universeBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>월별 리밸런싱 로그</h2>
+    <div class="table-scroll log-table-wrap">
+      <table>
+        <thead><tr><th class="mono">월</th><th>모드</th><th>보유 구성</th><th class="mono">월간 수익률</th><th class="mono">잔고</th></tr></thead>
+        <tbody id="logBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer class="notes">
+    <h3>백테스트 전제 및 한계 — 반드시 읽어주세요</h3>
+    <ul>
+      <li><strong>"시가총액 비례" 배분은 실시간 시가총액이 아니라 근사치입니다.</strong> 현재(2026년 9월) 발행주식수 × 과거 시점 주가로 역산했습니다 — 자사주매입·유상증자로 발행주식수가 실제로 변했다면 과거 시점 비중이 정확하지 않을 수 있습니다.</li>
+      <li><strong>전체 미국 시장이 아니라 섹터당 시가총액 상위 10개 대형주(총 110종목)로 후보군을 구성했습니다.</strong> 수천 개 상장사를 전부 담을 순 없어 대표성 있는 대형주 위주로 좁혔습니다 — 중소형주 강세 구간은 반영되지 않습니다.</li>
+      <li><strong>배당 재투자가 반영된 조정종가(Adjusted Close)를 사용했습니다</strong> — 채권/금 ETF(TLT·SHY·BIL·GLD)를 포함해 총수익(Total Return)에 가깝게 계산되어, 앞선 국내 ETF 백테스터보다 안전자산 구간이 더 정확합니다.</li>
+      <li><strong>단일 과거 경로에 대한 백테스트입니다.</strong> 특정 구간(예: AI/반도체 랠리)에 크게 기여한 소수 종목이 결과를 좌우할 수 있어, 이 10년이 앞으로도 반복된다는 보장은 없습니다. 종목 수(Top-N)가 적을수록 이 효과가 커집니다.</li>
+      <li><strong>매매수수료·환전 스프레드·세금(양도소득세 22%, 연 250만원 공제)이 전혀 반영되지 않았습니다.</strong> 월 단위로 종목을 교체하면 실제 수익률은 이보다 낮아집니다.</li>
+      <li>각 종목은 실제 상장(또는 데이터 확보) 시점부터만 백테스트에 포함되며, 모멘텀 계산에 필요한 과거 데이터가 없으면 그 달은 후보에서 제외됩니다.</li>
+      <li>데이터 출처: Yahoo Finance 월봉 조정종가. 마지막 데이터: <span class="lastMonthNote"></span> 월말 — 매월 1일 아침 지난달 월말 가격이 자동으로 추가됩니다. 이 도구는 투자 조언이 아닌 아이디어 검증용 참고 자료입니다.</li>
+    </ul>
+  </footer>
+  </div>
+  <div class="tab-pane" id="pane-compare" hidden>
+    <header class="hero">
+      <div class="eyebrow">S&amp;P 500 · 나스닥100 · 주요 ETF <span id="cmpCount"></span> · 월간 · 배당 재투자 반영</div>
+      <h1>종목 비교 백테스트</h1>
+      <p>원하는 종목을 골라 S&amp;P 500(또는 다른 벤치마크)과 비교하거나, 여러 종목을 비중대로 묶은 포트폴리오를 지정한 기간 동안 백테스트합니다. $10,000을 투자했을 때의 성장, 낙폭, 연도별 수익률을 보여줍니다.</p>
+    </header>
+
+    <section class="panel controls" aria-label="종목 비교 설정">
+      <div class="control-group">
+        <label for="tickerInput">종목 추가 (최대 8개) — 티커나 회사명 입력</label>
+        <div class="ticker-entry">
+          <input id="tickerInput" list="tickerList" placeholder="예: AAPL, NVDA, SCHD, Microsoft" autocomplete="off" spellcheck="false">
+          <button type="button" class="btn primary" id="tickerAdd">추가</button>
+          <button type="button" class="btn" id="tickerClear">모두 지우기</button>
+        </div>
+        <datalist id="tickerList"></datalist>
+        <div class="entry-msg" id="entryMsg"></div>
+        <div class="presets" id="presets"><span class="lbl">빠른 선택</span></div>
+      </div>
+      <div class="chips" id="chips"></div>
+      <div class="control-row">
+        <div class="control-group">
+          <label>방식</label>
+          <div class="segmented" data-cmp="mode" role="group">
+            <button data-value="each" class="active" type="button">종목별 비교</button>
+            <button data-value="port" type="button">포트폴리오로 묶기</button>
+          </div>
+          <span class="hint" id="modeHint">각 종목을 따로 샀을 때를 나란히 비교합니다.</span>
+        </div>
+        <div class="control-group" id="rebalGroup" hidden>
+          <label>리밸런싱 (포트폴리오)</label>
+          <div class="segmented" data-cmp="rebal" role="group">
+            <button data-value="m" class="active" type="button">매월</button>
+            <button data-value="y" type="button">매년</button>
+            <button data-value="none" type="button">안 함</button>
+          </div>
+          <span class="hint weight-sum" id="weightSum"></span>
+        </div>
+        <div class="control-group">
+          <label for="benchSel">벤치마크</label>
+          <select id="benchSel">
+            <option value="SPY">S&amp;P 500 (SPY)</option>
+            <option value="QQQ">나스닥100 (QQQ)</option>
+            <option value="VTI">미국 전체 (VTI)</option>
+            <option value="DIA">다우존스 (DIA)</option>
+            <option value="none">없음</option>
+          </select>
+        </div>
+      </div>
+      <div class="control-row">
+        <div class="control-group" style="flex-basis:420px;">
+          <label>기간</label>
+          <div class="range-row">
+            <select id="startSel" aria-label="시작월"></select>
+            <span style="color:var(--muted);">→</span>
+            <select id="endSel" aria-label="종료월"></select>
+          </div>
+          <div class="presets" id="periodPresets"></div>
+        </div>
+        <div class="control-group">
+          <label>차트 눈금</label>
+          <div class="segmented" data-cmp="scale" role="group">
+            <button data-value="log" class="active" type="button">로그</button>
+            <button data-value="lin" type="button">일반</button>
+          </div>
+        </div>
+      </div>
+      <div class="cmp-notes" id="cmpNotes"></div>
+    </section>
+
+    <section class="stats-row" aria-label="핵심 지표" id="cmpTiles"></section>
+
+    <section class="panel">
+      <div class="chart-header">
+        <h2>$10,000 투자 시 성장</h2>
+        <div class="legend" id="cmpLegend"></div>
+      </div>
+      <p class="chart-sub" id="cmpChartSub"></p>
+      <div class="chart-wrap">
+        <svg id="cmpChart" viewBox="0 0 960 360" preserveAspectRatio="xMidYMid meet" role="img" aria-label="선택 종목과 벤치마크의 누적 성장 비교"></svg>
+      </div>
+      <h2 style="margin:22px 0 4px;font-size:15px;">낙폭 (고점 대비 하락률)</h2>
+      <p class="chart-sub">각 시점에 직전 최고점보다 몇 % 내려와 있는지. 가장 깊은 곳이 최대낙폭(MDD)입니다.</p>
+      <div class="chart-wrap">
+        <svg id="ddChart" viewBox="0 0 960 170" preserveAspectRatio="xMidYMid meet" role="img" aria-label="낙폭 비교"></svg>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>성과 지표</h2>
+      <div class="table-scroll">
+        <table class="stat-table">
+          <thead><tr><th>종목</th><th class="num">최종 금액</th><th class="num">총 수익률</th><th class="num">연평균(CAGR)</th><th class="num">변동성(연)</th><th class="num">최대낙폭</th><th class="num">샤프 비율</th><th class="num">최고의 달</th><th class="num">최악의 달</th><th class="num">상승한 달</th><th class="num">벤치마크 대비</th></tr></thead>
+          <tbody id="statBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>연도별 수익률</h2>
+      <div class="table-scroll">
+        <table class="yr-table">
+          <thead id="yrHead"></thead>
+          <tbody id="yrBody"></tbody>
+        </table>
+      </div>
+      <p class="chart-sub" style="margin-top:8px;">* 표시는 선택 기간 때문에 1년 전체가 아닌 해입니다.</p>
+    </section>
+
+    <footer class="notes">
+      <h3>계산 방식과 한계</h3>
+      <ul>
+        <li><strong>월말 조정종가(배당 재투자·분할 반영, Yahoo Finance) 기준의 월간 백테스트</strong>입니다. 매월 1일 아침에 지난달 월말 가격이 자동으로 추가됩니다.</li>
+        <li><strong>공정한 비교를 위해 선택한 모든 종목과 벤치마크에 데이터가 있는 달부터</strong> 시작합니다. 최근 상장 종목을 넣으면 시작월이 자동으로 늦춰지고 위에 안내가 뜹니다.</li>
+        <li><strong>포트폴리오:</strong> 매월 리밸런싱은 매달 말 목표 비중으로 되돌리고, 매년은 매년 12월 말에 되돌리며, 안 함은 처음 비중으로 산 뒤 그대로 둡니다. 비중 합계가 100%가 아니면 비율대로 자동 조정합니다.</li>
+        <li><strong>샤프 비율</strong> = (월 수익률 − 초단기 국채 BIL 월 수익률)의 평균 ÷ 표준편차 × √12. <strong>변동성</strong>은 월 수익률 표준편차 × √12입니다. 월말 기준이라 월중 낙폭은 반영되지 않아 실제 최대낙폭은 더 클 수 있습니다.</li>
+        <li><strong>매매수수료·환전 비용·세금(해외주식 양도소득세 22%)은 반영하지 않았습니다.</strong> 종목 목록은 현재 S&amp;P 500·나스닥100 구성종목이라 과거에 빠진 종목은 없습니다(생존 편향). 원하는 종목이 목록에 없으면 Claude에게 추가를 요청하세요. 투자 조언이 아닌 참고 자료입니다.</li>
+      </ul>
+    </footer>
+  </div>
+
+</div>
+<div class="float-tip" id="floatTip" hidden></div>
+<script>
+function initRotation(RAW_DATA){
+
+
+const SAFE_CODES = ["BIL","SHY","TLT","GLD"];
+const BENCH_CODES = ["SPY","QQQ"];
+const SECTOR_MAP = {};
+for (const code in RAW_DATA){
+  const info = RAW_DATA[code];
+  if (info.sector){
+    if (!SECTOR_MAP[info.sector]) SECTOR_MAP[info.sector] = [];
+    SECTOR_MAP[info.sector].push(code);
+  }
+}
+const SECTOR_NAMES = Object.keys(SECTOR_MAP);
+
+const WEIGHT_PRESETS = {
+  vaa:    {1:12, 3:4, 6:2, 12:1},
+  equal3: {3:1, 6:1, 12:1},
+  m12:    {12:1},
+};
+
+const state = { weight: "vaa", topSectors: 2, topn: 1, safen: 1, startIdx: 12, weightMode: "equal" };
+
+const priceMap = {};
+for (const code in RAW_DATA){
+  const m = new Map();
+  RAW_DATA[code].prices.forEach(([ym,c]) => m.set(ym, c));
+  priceMap[code] = m;
+}
+const masterMonths = RAW_DATA["SPY"].prices.map(p => p[0]).sort();
+const DEFAULT_START = Math.max(12, masterMonths.indexOf("201710"));  // 예전 결과와 비교하기 쉽게 기본 시작월은 2017.10
+state.startIdx = DEFAULT_START;
+
+function fmtMonth(ym){ return ym.slice(0,4) + "." + ym.slice(4,6); }
+function fmtUsd(n){ return "$" + Math.round(n).toLocaleString("en-US"); }
+function fmtPct(n, digits=2){ return (n>=0?"+":"") + n.toFixed(digits) + "%"; }
+
+function score(code, i, weights){
+  const pm = priceMap[code];
+  const nowYm = masterMonths[i];
+  if (!pm.has(nowYm)) return null;
+  const p0 = pm.get(nowYm);
+  let total = 0;
+  for (const period in weights){
+    const p = parseInt(period, 10);
+    if (i - p < 0) return null;
+    const pastYm = masterMonths[i - p];
+    if (!pm.has(pastYm)) return null;
+    const pPast = pm.get(pastYm);
+    if (!(pPast > 0)) return null;
+    total += weights[period] * (p0 / pPast - 1);
+  }
+  return total;
+}
+
+function approxMarketCap(code, i){
+  const info = RAW_DATA[code];
+  if (!info.sharesOut) return null;
+  const pm = priceMap[code];
+  const p = pm.get(masterMonths[i]);
+  if (p === undefined) return null;
+  return info.sharesOut * p;
+}
+
+function evalMonth(i, weights){
+  const sectorScores = {};
+  const stockScores = {};
+  for (const sector of SECTOR_NAMES){
+    const scored = SECTOR_MAP[sector]
+      .map(code => ({ code, s: score(code, i, weights) }))
+      .filter(x => x.s !== null);
+    if (scored.length === 0) continue;
+    scored.sort((a,b) => b.s - a.s);
+    stockScores[sector] = scored;
+    sectorScores[sector] = scored.reduce((sum,x) => sum + x.s, 0) / scored.length;
+  }
+  return { sectorScores, stockScores };
+}
+
+function runBacktest(){
+  const weights = WEIGHT_PRESETS[state.weight];
+  const requiredLookback = Math.max(...Object.keys(weights).map(Number));
+  const startIdx = Math.max(state.startIdx, requiredLookback);
+
+  let nav = 10_000, spyNav = 10_000, qqqNav = 10_000;
+  const log = [];
+  const navSeries = [{ ym: masterMonths[startIdx], nav, spyNav, qqqNav }];
+  let lastEval = null;
+
+  for (let i = startIdx; i < masterMonths.length - 1; i++){
+    const { sectorScores, stockScores } = evalMonth(i, weights);
+    lastEval = { sectorScores, stockScores, i };
+    const rankedSectors = Object.entries(sectorScores).sort((a,b) => b[1]-a[1]);
+    const eligibleSectors = rankedSectors.filter(([s,sc]) => sc > 0);
+
+    let mode = "offensive";
+    const picksBySector = [];
+    if (eligibleSectors.length > 0){
+      const chosen = eligibleSectors.slice(0, state.topSectors);
+      const wSector = 1 / chosen.length;
+      for (const [sector] of chosen){
+        let members = stockScores[sector].filter(x => x.s > 0).slice(0, state.topn);
+        if (members.length === 0) members = stockScores[sector].slice(0,1);
+        let picks;
+        if (state.weightMode === "cap"){
+          const caps = members.map(m => ({ m, cap: approxMarketCap(m.code, i) })).filter(x => x.cap && x.cap > 0);
+          if (caps.length > 0){
+            const totalCap = caps.reduce((sum,x) => sum + x.cap, 0);
+            picks = caps.map(x => ({ code: x.m.code, s: x.m.s, weight: wSector * (x.cap / totalCap) }));
+          } else {
+            const wStock = wSector / members.length;
+            picks = members.map(m => ({ code: m.code, s: m.s, weight: wStock }));
+          }
+        } else {
+          const wStock = wSector / members.length;
+          picks = members.map(m => ({ code: m.code, s: m.s, weight: wStock }));
+        }
+        picksBySector.push({ sector, picks });
+      }
+    } else {
+      mode = "defensive";
+      const safeScored = SAFE_CODES
+        .map(code => ({ code, s: score(code, i, weights) }))
+        .filter(x => x.s !== null)
+        .sort((a,b) => b.s - a.s)
+        .slice(0, state.safen);
+      if (safeScored.length > 0){
+        const w = 1 / safeScored.length;
+        picksBySector.push({ sector: "안전자산", picks: safeScored.map(m => ({ code: m.code, s: m.s, weight: w })) });
+      }
+    }
+
+    const nextYm = masterMonths[i+1];
+    let monthRet = 0;
+    for (const block of picksBySector){
+      for (const p of block.picks){
+        const pm = priceMap[p.code];
+        const pNow = pm.get(masterMonths[i]);
+        const pNext = pm.get(nextYm);
+        if (pNow === undefined || pNext === undefined) continue;
+        monthRet += p.weight * (pNext / pNow - 1);
+      }
+    }
+    nav *= (1 + monthRet);
+
+    const pmSpy = priceMap["SPY"], pmQqq = priceMap["QQQ"];
+    spyNav *= (1 + (pmSpy.get(nextYm)/pmSpy.get(masterMonths[i]) - 1));
+    qqqNav *= (1 + (pmQqq.get(nextYm)/pmQqq.get(masterMonths[i]) - 1));
+
+    log.push({ month: nextYm, mode, picksBySector, ret: monthRet*100, nav, spyNav, qqqNav });
+    navSeries.push({ ym: nextYm, nav, spyNav, qqqNav });
+  }
+  return { log, navSeries, lastEval };
+}
+
+function computeStats(navSeries, log){
+  const n = log.length;
+  const years = n / 12;
+  const finalNav = navSeries[navSeries.length-1].nav;
+  const finalSpy = navSeries[navSeries.length-1].spyNav;
+  const cagr = (Math.pow(finalNav/10_000, 1/years) - 1) * 100;
+  const cagrSpy = (Math.pow(finalSpy/10_000, 1/years) - 1) * 100;
+  let peak = -Infinity, mdd = 0;
+  for (const p of navSeries){
+    if (p.nav > peak) peak = p.nav;
+    const dd = (p.nav - peak) / peak;
+    if (dd < mdd) mdd = dd;
+  }
+  return { finalNav, finalSpy, cagr, cagrSpy, mdd: mdd*100, months: n, years };
+}
+
+function buildSelectOptions(){
+  const topSectorsSel = document.getElementById("topSectors");
+  topSectorsSel.innerHTML = "";
+  for (let s = 1; s <= SECTOR_NAMES.length; s++){
+    const opt = document.createElement("option");
+    opt.value = s; opt.textContent = s + "개 섹터";
+    topSectorsSel.appendChild(opt);
+  }
+  topSectorsSel.value = 2;
+  topSectorsSel.addEventListener("change", () => { state.topSectors = parseInt(topSectorsSel.value,10); render(); });
+
+  const startSel = document.getElementById("startMonth");
+  startSel.innerHTML = "";
+  for (let i = 12; i <= masterMonths.length - 13; i++){
+    const opt = document.createElement("option");
+    opt.value = i; opt.textContent = fmtMonth(masterMonths[i]) + " 부터";
+    startSel.appendChild(opt);
+  }
+  startSel.value = DEFAULT_START;
+  startSel.addEventListener("change", () => { state.startIdx = parseInt(startSel.value,10); render(); });
+}
+
+function wireSegmented(){
+  document.querySelectorAll("#pane-rotation .segmented").forEach(group => {
+    const key = group.dataset.control;
+    group.querySelectorAll("button").forEach(btn => {
+      btn.addEventListener("click", () => {
+        group.querySelectorAll("button").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        const v = btn.dataset.value;
+        state[key] = (key === "topn" || key === "safen") ? parseInt(v,10) : v;
+        render();
+      });
+    });
+  });
+}
+
+function renderStats(stats){
+  document.getElementById("statFinal").textContent = fmtUsd(stats.finalNav);
+  document.getElementById("statCagr").textContent = fmtPct(stats.cagr, 2);
+  document.getElementById("statCagr").style.color = stats.cagr >= 0 ? "var(--up)" : "var(--down)";
+  document.getElementById("statMonths").textContent = stats.months + "개월 (" + stats.years.toFixed(1) + "년) 백테스트";
+  document.getElementById("statMdd").textContent = stats.mdd.toFixed(1) + "%";
+  const diff = stats.cagr - stats.cagrSpy;
+  document.getElementById("statVsSpy").textContent = (diff>=0?"+":"") + diff.toFixed(2) + "%p";
+  const subEl = document.getElementById("statVsSpySub");
+  subEl.className = "sub " + (diff >= 0 ? "up" : "down");
+  subEl.textContent = "SPY CAGR " + fmtPct(stats.cagrSpy,2);
+}
+
+function renderHoldings(log){
+  const box = document.getElementById("currentHoldings");
+  if (log.length === 0){ box.innerHTML = "<p style='color:var(--muted);font-size:13px;'>표시할 구간이 없습니다.</p>"; return; }
+  const last = log[log.length-1];
+  const modeLabel = last.mode === "offensive" ? "공격 모드" : "방어 모드 (전 섹터 모멘텀 약세)";
+  let html = `<div class="holding-mode ${last.mode}"><span class="dot"></span>${modeLabel}</div><div class="holding-list">`;
+  for (const block of last.picksBySector){
+    html += `<div class="sector-block"><div class="sector-name">${block.sector}</div>`;
+    for (const p of block.picks){
+      html += `<div class="holding-card"><div><div class="name">${p.code}</div></div><div class="weight">${(p.weight*100).toFixed(1)}%</div></div>`;
+    }
+    html += `</div>`;
+  }
+  html += `</div><div class="holding-asof">기준월: ${fmtMonth(last.month)} · 이 달 실현 수익률 ${fmtPct(last.ret)}</div>`;
+  box.innerHTML = html;
+}
+
+function renderSectorRank(lastEval){
+  const body = document.getElementById("sectorRankBody");
+  body.innerHTML = "";
+  if (!lastEval){ return; }
+  const ranked = Object.entries(lastEval.sectorScores).sort((a,b) => b[1]-a[1]);
+  ranked.forEach(([sector, sc], idx) => {
+    const tr = document.createElement("tr");
+    const eligible = sc > 0;
+    tr.innerHTML = `
+      <td class="rank-num">${idx+1}</td>
+      <td>${sector}</td>
+      <td class="mono ${sc>=0?"ret-up":"ret-down"}">${(sc*100).toFixed(1)}%</td>
+      <td>${eligible ? `<span class="tag eligible">편입 후보</span>` : `<span class="tag">제외</span>`}</td>`;
+    body.appendChild(tr);
+  });
+}
+
+function renderUniverse(){
+  const body = document.getElementById("universeBody");
+  body.innerHTML = "";
+  const allCodes = Object.keys(RAW_DATA).sort((a,b) => {
+    const sa = a.sector||"", sb = b.sector||"";
+    const catA = RAW_DATA[a].category, catB = RAW_DATA[b].category;
+    return (catA||"").localeCompare(catB||"") || a.localeCompare(b);
+  });
+  for (const code of allCodes){
+    const info = RAW_DATA[code];
+    const tr = document.createElement("tr");
+    const isSafe = info.tag === "safe", isBench = info.tag === "bench";
+    const monthsHeld = masterMonths.length - masterMonths.indexOf(info.prices[0][0]);
+    const warmingUp = monthsHeld < 13 && !isBench;
+    tr.innerHTML = `
+      <td class="mono">${code}</td>
+      <td><span class="tag ${isSafe?"safe":""}">${info.category}</span></td>
+      <td class="mono">${fmtMonth(info.prices[0][0])}</td>
+      <td>${warmingUp ? `<span class="tag" style="background:rgba(160,100,0,0.14);color:var(--warning);">최근 상장 · 모멘텀 계산 불가 (12개월 데이터 필요)</span>` : ""}</td>`;
+    body.appendChild(tr);
+  }
+  document.getElementById("universeCount").textContent = allCodes.length;
+}
+
+function renderLog(log){
+  const body = document.getElementById("logBody");
+  body.innerHTML = "";
+  for (let idx = log.length - 1; idx >= 0; idx--){
+    const row = log[idx];
+    const tr = document.createElement("tr");
+    const compHtml = row.picksBySector.map(b =>
+      `<strong>${b.sector}</strong>: ` + b.picks.map(p => `${p.code}(${(p.weight*100).toFixed(0)}%)`).join(", ")
+    ).join("<br>");
+    const modeTag = row.mode === "offensive" ? `<span class="tag">공격</span>` : `<span class="tag safe">방어</span>`;
+    tr.innerHTML = `
+      <td class="mono">${fmtMonth(row.month)}</td>
+      <td>${modeTag}</td>
+      <td>${compHtml}</td>
+      <td class="${row.ret>=0?"ret-up":"ret-down"}">${fmtPct(row.ret)}</td>
+      <td class="mono">${fmtUsd(row.nav)}</td>`;
+    body.appendChild(tr);
+  }
+}
+
+const CHART_W = 960, CHART_H = 340;
+const CHART_PAD = { top: 16, right: 16, bottom: 28, left: 56 };
+
+function renderChart(navSeries){
+  const svg = document.getElementById("equityChart");
+  svg.innerHTML = "";
+  const plotW = CHART_W - CHART_PAD.left - CHART_PAD.right;
+  const plotH = CHART_H - CHART_PAD.top - CHART_PAD.bottom;
+
+  const series = [
+    { key: "nav",    label: "전략 (섹터+종목 로테이션)", color: "var(--cat-1)" },
+    { key: "spyNav", label: "SPY 단순보유",              color: "var(--cat-2)" },
+    { key: "qqqNav", label: "QQQ 단순보유",              color: "var(--cat-3)" },
+  ];
+
+  const allVals = navSeries.flatMap(p => [p.nav, p.spyNav, p.qqqNav]);
+  const logMin = Math.log10(Math.min(...allVals) * 0.92);
+  const logMax = Math.log10(Math.max(...allVals) * 1.08);
+
+  const xScale = i => CHART_PAD.left + (i / (navSeries.length - 1)) * plotW;
+  const yScale = v => CHART_PAD.top + (1 - (Math.log10(v) - logMin) / (logMax - logMin)) * plotH;
+
+  const ns = "http://www.w3.org/2000/svg";
+  const grid = document.createElementNS(ns, "g");
+  const ticks = [];
+  const startPow = Math.floor(logMin), endPow = Math.ceil(logMax);
+  for (let p = startPow; p <= endPow; p++){
+    for (const mult of [1, 2, 5]){
+      const v = mult * Math.pow(10, p);
+      const lv = Math.log10(v);
+      if (lv >= logMin && lv <= logMax) ticks.push(v);
+    }
+  }
+  ticks.forEach(v => {
+    const y = yScale(v);
+    const line = document.createElementNS(ns, "line");
+    line.setAttribute("x1", CHART_PAD.left); line.setAttribute("x2", CHART_W - CHART_PAD.right);
+    line.setAttribute("y1", y); line.setAttribute("y2", y);
+    line.setAttribute("stroke", "var(--border)"); line.setAttribute("stroke-width", "1");
+    grid.appendChild(line);
+    const label = document.createElementNS(ns, "text");
+    label.setAttribute("x", CHART_PAD.left - 8); label.setAttribute("y", y + 3.5);
+    label.setAttribute("text-anchor", "end"); label.setAttribute("font-size", "10.5");
+    label.setAttribute("fill", "var(--muted)"); label.setAttribute("font-family", "var(--font-mono)");
+    label.textContent = v >= 1000 ? "$" + (v/1000).toFixed(0) + "K" : "$" + v.toFixed(0);
+    grid.appendChild(label);
+  });
+  svg.appendChild(grid);
+
+  const xTickCount = 6;
+  for (let t = 0; t <= xTickCount; t++){
+    const i = Math.round((t / xTickCount) * (navSeries.length - 1));
+    const x = xScale(i);
+    const label = document.createElementNS(ns, "text");
+    label.setAttribute("x", x); label.setAttribute("y", CHART_H - 8);
+    label.setAttribute("text-anchor", t===0 ? "start" : (t===xTickCount ? "end":"middle"));
+    label.setAttribute("font-size", "10.5"); label.setAttribute("fill", "var(--muted)");
+    label.setAttribute("font-family", "var(--font-mono)");
+    label.textContent = fmtMonth(navSeries[i].ym);
+    svg.appendChild(label);
+  }
+
+  series.forEach(s => {
+    const pts = navSeries.map((p,i) => `${xScale(i).toFixed(2)},${yScale(p[s.key]).toFixed(2)}`).join(" ");
+    const poly = document.createElementNS(ns, "polyline");
+    poly.setAttribute("points", pts);
+    poly.setAttribute("fill", "none");
+    poly.setAttribute("stroke", s.color);
+    poly.setAttribute("stroke-width", s.key === "nav" ? "2.4" : "2");
+    poly.setAttribute("stroke-linejoin", "round");
+    poly.setAttribute("stroke-linecap", "round");
+    svg.appendChild(poly);
+
+    const last = navSeries[navSeries.length-1];
+    const dot = document.createElementNS(ns, "circle");
+    dot.setAttribute("cx", xScale(navSeries.length-1)); dot.setAttribute("cy", yScale(last[s.key]));
+    dot.setAttribute("r", "3.5"); dot.setAttribute("fill", s.color);
+    dot.setAttribute("stroke", "var(--surface)"); dot.setAttribute("stroke-width","1.5");
+    svg.appendChild(dot);
+  });
+
+  const legend = document.getElementById("chartLegend");
+  legend.innerHTML = series.map(s => `<div class="legend-item"><span class="legend-swatch" style="background:${s.color}"></span>${s.label}</div>`).join("");
+
+  const hoverLine = document.createElementNS(ns, "line");
+  hoverLine.setAttribute("y1", CHART_PAD.top); hoverLine.setAttribute("y2", CHART_H - CHART_PAD.bottom);
+  hoverLine.setAttribute("stroke", "var(--muted)"); hoverLine.setAttribute("stroke-width","1");
+  hoverLine.setAttribute("stroke-dasharray","3,3"); hoverLine.setAttribute("visibility","hidden");
+  svg.appendChild(hoverLine);
+  const hoverDots = series.map(s => {
+    const c = document.createElementNS(ns, "circle");
+    c.setAttribute("r","4"); c.setAttribute("fill", s.color); c.setAttribute("stroke","var(--surface)");
+    c.setAttribute("stroke-width","1.5"); c.setAttribute("visibility","hidden");
+    svg.appendChild(c);
+    return c;
+  });
+
+  const tooltip = document.getElementById("chartTooltip");
+  function onMove(evt){
+    const rect = svg.getBoundingClientRect();
+    const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+    const relX = (clientX - rect.left) / rect.width * CHART_W;
+    let i = Math.round(((relX - CHART_PAD.left) / plotW) * (navSeries.length - 1));
+    i = Math.max(0, Math.min(navSeries.length - 1, i));
+    const x = xScale(i);
+    hoverLine.setAttribute("x1", x); hoverLine.setAttribute("x2", x); hoverLine.setAttribute("visibility","visible");
+    const p = navSeries[i];
+    series.forEach((s, idx) => {
+      hoverDots[idx].setAttribute("cx", x); hoverDots[idx].setAttribute("cy", yScale(p[s.key]));
+      hoverDots[idx].setAttribute("visibility","visible");
+    });
+    tooltip.innerHTML = `<div class="tt-date">${fmtMonth(p.ym)}</div>` + series.map(s =>
+      `<div class="tt-row"><span class="k">${s.label}</span><span>${fmtUsd(p[s.key])}</span></div>`).join("");
+    const px = (x / CHART_W) * rect.width;
+    const py = (yScale(p.nav) / CHART_H) * rect.height;
+    tooltip.style.left = px + "px";
+    tooltip.style.top = py + "px";
+    tooltip.hidden = false;
+  }
+  function onLeave(){
+    hoverLine.setAttribute("visibility","hidden");
+    hoverDots.forEach(d => d.setAttribute("visibility","hidden"));
+    tooltip.hidden = true;
+  }
+  svg.addEventListener("mousemove", onMove);
+  svg.addEventListener("mouseleave", onLeave);
+  svg.addEventListener("touchmove", onMove, {passive:true});
+  svg.addEventListener("touchend", onLeave);
+}
+
+function render(){
+  const { log, navSeries, lastEval } = runBacktest();
+  const stats = computeStats(navSeries, log);
+  renderStats(stats);
+  renderHoldings(log);
+  renderSectorRank(lastEval);
+  renderLog(log);
+  renderChart(navSeries);
+}
+
+buildSelectOptions();
+wireSegmented();
+renderUniverse();
+render();
+
+}
+
+// ================= 종목 비교 백테스트 =================
+function initCompare(DATA){
+  const MONTHS = DATA.months;
+  const TK = DATA.tickers;
+  const MAX_PICK = 8;
+  const SLOTS = ["var(--s1)","var(--s2)","var(--s3)","var(--s4)","var(--s5)","var(--s6)","var(--s7)","var(--s8)"];
+  const PRESETS = [
+    { label: "빅테크 7", t: ["AAPL","MSFT","NVDA","AMZN","GOOGL","META","TSLA"] },
+    { label: "지수 ETF", t: ["QQQ","DIA","IWM","RSP"] },
+    { label: "배당 ETF", t: ["SCHD","VIG","VYM","JEPI"] },
+    { label: "반도체", t: ["NVDA","AVGO","AMD","TSM","MU","SOXX"] },
+    { label: "60/40 포트폴리오", t: ["VTI","BND"], mode: "port", w: { VTI: 60, BND: 40 } },
+  ];
+  const PERIOD_PRESETS = [["1년",12],["3년",36],["5년",60],["10년",120],["전체",null]];
+
+  const cmp = { tickers: ["NVDA","AAPL","MSFT"], mode: "each", weights: {}, rebal: "m", bench: "SPY",
+                start: MONTHS[Math.max(0, MONTHS.length - 121)], end: MONTHS[MONTHS.length - 1], scale: "log" };
+  try {
+    const saved = JSON.parse(localStorage.getItem("cmpState") || "null");
+    if (saved && Array.isArray(saved.tickers)) Object.assign(cmp, saved);
+  } catch (e) {}
+  cmp.tickers = cmp.tickers.filter(t => TK[t]).slice(0, MAX_PICK);
+  if (!MONTHS.includes(cmp.start)) cmp.start = MONTHS[Math.max(0, MONTHS.length - 121)];
+  if (!MONTHS.includes(cmp.end) || cmp.endWasLatest) cmp.end = MONTHS[MONTHS.length - 1];  // 저장 당시 최신 월을 보고 있었으면 새 달이 추가돼도 최신 월로
+  function save(){
+    try { localStorage.setItem("cmpState", JSON.stringify({ ...cmp, endWasLatest: cmp.end === MONTHS[MONTHS.length - 1] })); } catch (e) {}
+  }
+
+  const colorOf = t => SLOTS[cmp.tickers.indexOf(t) % SLOTS.length];
+  const fmtM = ym => ym.slice(0,4) + "." + ym.slice(4,6);
+  const fmtUsd0 = n => "$" + Math.round(n).toLocaleString("en-US");
+  const pctS = (v, d=1) => v == null || !isFinite(v) ? "–" : (v>=0?"+":"") + v.toFixed(d) + "%";
+  const cls = v => v == null ? "" : (v >= 0 ? "ret-up" : "ret-down");
+  const firstIdx = t => TK[t].p.findIndex(v => v != null);
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+  document.getElementById("cmpCount").textContent = "· " + Object.keys(TK).length + "종목";
+
+  // ---------- 종목 입력 ----------
+  const dl = document.getElementById("tickerList");
+  dl.innerHTML = Object.keys(TK).sort().map(t => `<option value="${t}">${esc(TK[t].n)}</option>`).join("");
+  const input = document.getElementById("tickerInput");
+  const msg = document.getElementById("entryMsg");
+  function resolve(q){
+    q = q.trim();
+    if (!q) return null;
+    const head = q.split(/\s|—/)[0].toUpperCase().replace(".", "-");
+    if (TK[head]) return head;
+    const lower = q.toLowerCase();
+    const hit = Object.keys(TK).find(t => TK[t].n.toLowerCase().startsWith(lower)) || Object.keys(TK).find(t => TK[t].n.toLowerCase().includes(lower));
+    return hit || null;
+  }
+  function addTicker(){
+    const t = resolve(input.value);
+    if (!t){ msg.textContent = `"${input.value.trim()}"은(는) 데이터에 없는 종목입니다. 추가를 원하면 Claude에게 요청하세요.`; return; }
+    if (cmp.tickers.includes(t)){ msg.textContent = t + "는 이미 선택돼 있습니다."; input.value = ""; return; }
+    if (cmp.tickers.length >= MAX_PICK){ msg.textContent = "최대 " + MAX_PICK + "개까지 고를 수 있습니다."; return; }
+    cmp.tickers.push(t); msg.textContent = ""; input.value = "";
+    renderCompare();
+  }
+  document.getElementById("tickerAdd").addEventListener("click", addTicker);
+  input.addEventListener("keydown", e => { if (e.key === "Enter"){ e.preventDefault(); addTicker(); } });
+  document.getElementById("tickerClear").addEventListener("click", () => { cmp.tickers = []; cmp.weights = {}; renderCompare(); });
+
+  const presetBox = document.getElementById("presets");
+  PRESETS.forEach(p => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "btn small"; b.textContent = p.label;
+    b.addEventListener("click", () => {
+      cmp.tickers = p.t.filter(t => TK[t]).slice(0, MAX_PICK);
+      cmp.weights = p.w ? { ...p.w } : {};
+      if (p.mode) setSeg("mode", p.mode);
+      msg.textContent = "";
+      renderCompare();
+    });
+    presetBox.appendChild(b);
+  });
+
+  // ---------- 기간 ----------
+  const startSel = document.getElementById("startSel"), endSel = document.getElementById("endSel");
+  startSel.innerHTML = endSel.innerHTML = MONTHS.map(m => `<option value="${m}">${fmtM(m)}</option>`).join("");
+  startSel.addEventListener("change", () => { cmp.start = startSel.value; renderCompare(); });
+  endSel.addEventListener("change", () => { cmp.end = endSel.value; renderCompare(); });
+  const pp = document.getElementById("periodPresets");
+  PERIOD_PRESETS.forEach(([label, n]) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "btn small"; b.textContent = label;
+    b.addEventListener("click", () => {
+      cmp.end = MONTHS[MONTHS.length - 1];
+      cmp.start = n == null ? MONTHS[0] : MONTHS[Math.max(0, MONTHS.length - 1 - n)];
+      renderCompare();
+    });
+    pp.appendChild(b);
+  });
+  const benchSel = document.getElementById("benchSel");
+  benchSel.addEventListener("change", () => { cmp.bench = benchSel.value; renderCompare(); });
+
+  function setSeg(key, v){
+    cmp[key] = v;
+    document.querySelectorAll(`[data-cmp="${key}"] button`).forEach(b => b.classList.toggle("active", b.dataset.value === v));
+  }
+  document.querySelectorAll("[data-cmp]").forEach(g => g.querySelectorAll("button").forEach(b =>
+    b.addEventListener("click", () => { setSeg(g.dataset.cmp, b.dataset.value); renderCompare(); })));
+
+  // ---------- 계산 ----------
+  function seriesPrices(t, s, e){
+    const p = TK[t].p, out = [];
+    let last = null;
+    for (let k = s; k <= e; k++){ if (p[k] != null) last = p[k]; out.push(last); }
+    return out;
+  }
+  function navFromPrices(px){ return px.map(v => 10000 * v / px[0]); }
+  function portfolioNav(ts, w, s, e, rebal){
+    const pxs = ts.map(t => seriesPrices(t, s, e));
+    const n = e - s + 1;
+    const nav = [10000];
+    let hold = w.map(x => x * 10000);          // 종목별 보유 금액
+    for (let k = 1; k < n; k++){
+      hold = hold.map((h, i) => h * pxs[i][k] / pxs[i][k-1]);
+      const total = hold.reduce((a, b) => a + b, 0);
+      nav.push(total);
+      const isYearEnd = MONTHS[s + k].slice(4) === "12";
+      if (rebal === "m" || (rebal === "y" && isYearEnd)) hold = w.map(x => x * total);
+    }
+    return nav;
+  }
+  function stats(nav, s){
+    const rets = nav.slice(1).map((v, k) => v / nav[k] - 1);
+    const n = rets.length;
+    const final = nav[nav.length - 1];
+    const cagr = n > 0 ? (Math.pow(final / 10000, 12 / n) - 1) * 100 : null;
+    const mean = rets.reduce((a, b) => a + b, 0) / (n || 1);
+    const sd = Math.sqrt(rets.reduce((a, b) => a + (b - mean) ** 2, 0) / Math.max(1, n - 1));
+    const bil = TK.BIL ? seriesPrices("BIL", s, s + n) : null;
+    let sharpe = null;
+    if (bil && n > 2){
+      const ex = rets.map((r, k) => r - (bil[k+1] / bil[k] - 1));
+      const em = ex.reduce((a, b) => a + b, 0) / n;
+      const esd = Math.sqrt(ex.reduce((a, b) => a + (b - em) ** 2, 0) / (n - 1));
+      sharpe = esd > 0 ? em / esd * Math.sqrt(12) : null;
+    }
+    let peak = -Infinity, mdd = 0;
+    const dd = nav.map(v => { peak = Math.max(peak, v); const d = (v / peak - 1) * 100; mdd = Math.min(mdd, d); return d; });
+    return { final, total: (final / 10000 - 1) * 100, cagr, vol: sd * Math.sqrt(12) * 100, sharpe, mdd, dd,
+             best: n ? Math.max(...rets) * 100 : null, worst: n ? Math.min(...rets) * 100 : null,
+             upRatio: n ? rets.filter(r => r > 0).length / n * 100 : null };
+  }
+
+  function compute(){
+    const notes = [];
+    let s = MONTHS.indexOf(cmp.start), e = MONTHS.indexOf(cmp.end);
+    if (s >= e){ notes.push("시작월이 종료월보다 늦어서 기간을 1년으로 맞췄습니다."); s = Math.max(0, e - 12); }
+    const involved = [...cmp.tickers, ...(cmp.bench !== "none" && TK[cmp.bench] ? [cmp.bench] : [])];
+    const latest = involved.reduce((m, t) => { const f = firstIdx(t); return f > m ? f : m; }, -1);
+    if (latest > s){
+      const late = involved.filter(t => firstIdx(t) > s).map(t => `${t}(${fmtM(MONTHS[firstIdx(t)])}~)`);
+      notes.push(`데이터가 늦게 시작하는 종목이 있어 시작월을 ${fmtM(MONTHS[latest])}로 맞췄습니다: ${late.join(", ")}`);
+      s = latest;
+    }
+    if (s >= e){ notes.push("선택한 기간에 공통 데이터가 부족합니다. 기간이나 종목을 바꿔 주세요."); return { notes, series: [], s, e }; }
+    const series = [];
+    if (cmp.mode === "port" && cmp.tickers.length){
+      const raw = cmp.tickers.map(t => Math.max(0, parseFloat(cmp.weights[t] ?? (100 / cmp.tickers.length)) || 0));
+      const sum = raw.reduce((a, b) => a + b, 0) || 1;
+      const w = raw.map(x => x / sum);
+      if (Math.abs(sum - 100) > 0.01) notes.push(`비중 합계가 ${sum.toFixed(1)}%라서 비율대로 100%에 맞춰 계산했습니다.`);
+      const label = "포트폴리오 (" + cmp.tickers.map((t, i) => `${t} ${(w[i]*100).toFixed(0)}%`).join(" · ") + ")";
+      series.push({ key: "PORT", label, color: "var(--ink)", kind: "port", nav: portfolioNav(cmp.tickers, w, s, e, cmp.rebal) });
+      cmp.tickers.forEach(t => series.push({ key: t, label: t, color: colorOf(t), kind: "member", nav: navFromPrices(seriesPrices(t, s, e)) }));
+    } else {
+      cmp.tickers.forEach(t => series.push({ key: t, label: t, color: colorOf(t), kind: "each", nav: navFromPrices(seriesPrices(t, s, e)) }));
+    }
+    if (cmp.bench !== "none" && TK[cmp.bench]){
+      series.push({ key: "BENCH", label: cmp.bench + " (벤치마크)", color: "var(--ink-2)", kind: "bench", nav: navFromPrices(seriesPrices(cmp.bench, s, e)) });
+    }
+    series.forEach(x => x.st = stats(x.nav, s));
+    return { notes, series, s, e };
+  }
+
+  // ---------- 그리기 ----------
+  const ns = "http://www.w3.org/2000/svg";
+  function el(tag, attrs, parent){
+    const n = document.createElementNS(ns, tag);
+    for (const k in attrs) n.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(n);
+    return n;
+  }
+  function strokeFor(x){
+    if (x.kind === "port") return { w: 2.8, dash: "", op: 1 };
+    if (x.kind === "bench") return { w: 1.8, dash: "6,4", op: 1 };
+    if (x.kind === "member") return { w: 1.3, dash: "", op: 0.55 };
+    return { w: 2, dash: "", op: 1 };
+  }
+
+  function drawMain(res){
+    const svg = document.getElementById("cmpChart");
+    svg.innerHTML = "";
+    const W = 960, H = 360, P = { t: 14, r: 70, b: 28, l: 60 };
+    const { series, s, e } = res;
+    if (!series.length){ return; }
+    const n = e - s + 1;
+    const log = cmp.scale === "log";
+    const all = series.flatMap(x => x.nav);
+    let lo = Math.min(...all), hi = Math.max(...all);
+    const tf = v => log ? Math.log10(v) : v;
+    let tlo = tf(lo), thi = tf(hi);
+    const padv = (thi - tlo) * 0.06 || 1;
+    tlo -= padv; thi += padv;
+    const x = k => P.l + (n === 1 ? 0 : k / (n - 1)) * (W - P.l - P.r);
+    const y = v => P.t + (1 - (tf(v) - tlo) / (thi - tlo)) * (H - P.t - P.b);
+
+    // y 눈금
+    const ticks = [];
+    if (log){
+      for (let p = Math.floor(tlo); p <= Math.ceil(thi); p++) for (const m of [1, 2, 5]){ const v = m * 10 ** p; if (tf(v) >= tlo && tf(v) <= thi) ticks.push(v); }
+    } else {
+      const step = niceStep((hi - Math.max(0, lo)) / 5);
+      for (let v = Math.ceil(Math.max(0, lo) / step) * step; v <= hi * 1.06; v += step) ticks.push(v);
+    }
+    ticks.forEach(v => {
+      el("line", { x1: P.l, x2: W - P.r, y1: y(v), y2: y(v), stroke: "var(--border)", "stroke-width": 1 }, svg);
+      const t = el("text", { x: P.l - 8, y: y(v) + 3.5, "text-anchor": "end", "font-size": 10.5, fill: "var(--muted)", "font-family": "var(--font-mono)" }, svg);
+      t.textContent = v >= 1e6 ? "$" + (v / 1e6).toFixed(1) + "M" : v >= 1000 ? "$" + (v / 1000).toFixed(0) + "K" : "$" + Math.round(v);
+    });
+    const base = el("line", { x1: P.l, x2: W - P.r, y1: y(10000), y2: y(10000), stroke: "var(--border-strong)", "stroke-width": 1, "stroke-dasharray": "2,3" }, svg);
+    xTicks(svg, x, s, n, H);
+
+    // 선: 구성종목 → 벤치마크 → 메인 순서로 (메인이 위)
+    const order = [...series].sort((a, b) => ({ member: 0, bench: 1, each: 2, port: 3 }[a.kind] - { member: 0, bench: 1, each: 2, port: 3 }[b.kind]));
+    order.forEach(sr => {
+      const st = strokeFor(sr);
+      el("polyline", { points: sr.nav.map((v, k) => `${x(k).toFixed(1)},${y(v).toFixed(1)}`).join(" "), fill: "none", stroke: sr.color,
+        "stroke-width": st.w, "stroke-dasharray": st.dash, "stroke-opacity": st.op, "stroke-linejoin": "round", "stroke-linecap": "round" }, svg);
+    });
+    // 끝점 라벨 (겹치지 않게 세로로 밀어냄)
+    const labels = series.filter(sr => sr.kind !== "member").map(sr => ({ sr, y: y(sr.nav[n - 1]) })).sort((a, b) => a.y - b.y);
+    for (let i = 1; i < labels.length; i++) if (labels[i].y - labels[i-1].y < 13) labels[i].y = labels[i-1].y + 13;
+    labels.forEach(l => {
+      el("circle", { cx: x(n - 1), cy: y(l.sr.nav[n - 1]), r: 3.5, fill: l.sr.color, stroke: "var(--surface)", "stroke-width": 1.5 }, svg);
+      const t = el("text", { x: x(n - 1) + 8, y: l.y + 3.5, "font-size": 11, fill: "var(--ink-2)", "font-family": "var(--font-mono)", "font-weight": 600 }, svg);
+      t.textContent = l.sr.kind === "port" ? "포트" : (l.sr.kind === "bench" ? cmp.bench : l.sr.key);
+    });
+    hover(svg, series, x, y, s, n, P, W, H, v => fmtUsd0(v), sr => sr.nav);
+  }
+
+  function drawDD(res){
+    const svg = document.getElementById("ddChart");
+    svg.innerHTML = "";
+    const W = 960, H = 170, P = { t: 10, r: 70, b: 26, l: 60 };
+    const { series, s, e } = res;
+    if (!series.length) return;
+    const n = e - s + 1;
+    const lo = Math.min(-5, ...series.flatMap(sr => sr.st.dd));
+    const x = k => P.l + (n === 1 ? 0 : k / (n - 1)) * (W - P.l - P.r);
+    const y = v => P.t + (v / lo) * (H - P.t - P.b);
+    const step = niceStep(-lo / 3);
+    for (let v = 0; v >= lo; v -= step){
+      el("line", { x1: P.l, x2: W - P.r, y1: y(v), y2: y(v), stroke: v === 0 ? "var(--border-strong)" : "var(--border)", "stroke-width": 1 }, svg);
+      const t = el("text", { x: P.l - 8, y: y(v) + 3.5, "text-anchor": "end", "font-size": 10.5, fill: "var(--muted)", "font-family": "var(--font-mono)" }, svg);
+      t.textContent = v.toFixed(0) + "%";
+    }
+    xTicks(svg, x, s, n, H);
+    const order = [...series].sort((a, b) => ({ member: 0, bench: 1, each: 2, port: 3 }[a.kind] - { member: 0, bench: 1, each: 2, port: 3 }[b.kind]));
+    order.filter(sr => sr.kind !== "member").forEach(sr => {
+      const st = strokeFor(sr);
+      el("polyline", { points: sr.st.dd.map((v, k) => `${x(k).toFixed(1)},${y(v).toFixed(1)}`).join(" "), fill: "none", stroke: sr.color,
+        "stroke-width": Math.min(st.w, 2), "stroke-dasharray": st.dash, "stroke-linejoin": "round" }, svg);
+    });
+    hover(svg, series.filter(sr => sr.kind !== "member"), x, y, s, n, P, W, H, v => v.toFixed(1) + "%", sr => sr.st.dd);
+  }
+
+  function niceStep(raw){
+    const p = 10 ** Math.floor(Math.log10(raw || 1));
+    const f = raw / p;
+    return (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * p;
+  }
+  function xTicks(svg, x, s, n, H){
+    const years = [];
+    for (let k = 0; k < n; k++) if (MONTHS[s + k].slice(4) === "01") years.push(k);
+    const every = Math.ceil(years.length / 8) || 1;
+    const show = years.length >= 2 ? years.filter((_, i) => i % every === 0) : [0, Math.floor((n - 1) / 2), n - 1];
+    show.forEach(k => {
+      const t = el("text", { x: x(k), y: H - 8, "text-anchor": "middle", "font-size": 10.5, fill: "var(--muted)", "font-family": "var(--font-mono)" }, svg);
+      t.textContent = years.length >= 2 ? MONTHS[s + k].slice(0, 4) : fmtM(MONTHS[s + k]);
+    });
+  }
+
+  const tip = document.getElementById("floatTip");
+  function hover(svg, series, x, y, s, n, P, W, H, fmt, val){
+    const line = el("line", { y1: P.t, y2: H - P.b, stroke: "var(--muted)", "stroke-width": 1, "stroke-dasharray": "3,3", visibility: "hidden" }, svg);
+    const dots = series.map(sr => el("circle", { r: sr.kind === "member" ? 3 : 4, fill: sr.color, stroke: "var(--surface)", "stroke-width": 1.5, visibility: "hidden" }, svg));
+    function move(evt){
+      const rect = svg.getBoundingClientRect();
+      const pt = evt.touches ? evt.touches[0] : evt;
+      const rel = (pt.clientX - rect.left) / rect.width * W;
+      const k = Math.max(0, Math.min(n - 1, Math.round((rel - P.l) / (W - P.l - P.r) * (n - 1))));
+      line.setAttribute("x1", x(k)); line.setAttribute("x2", x(k)); line.setAttribute("visibility", "visible");
+      series.forEach((sr, i) => { dots[i].setAttribute("cx", x(k)); dots[i].setAttribute("cy", y(val(sr)[k])); dots[i].setAttribute("visibility", "visible"); });
+      const rows = series.map(sr => ({ sr, v: val(sr)[k] })).sort((a, b) => b.v - a.v);
+      tip.innerHTML = `<div class="tt-date">${fmtM(MONTHS[s + k])}</div>` + rows.map(r =>
+        `<div class="tt-row"><span class="k"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${r.sr.color};margin-right:6px;"></span>${r.sr.kind === "port" ? "포트폴리오" : (r.sr.kind === "bench" ? cmp.bench : r.sr.key)}</span><span>${fmt(r.v)}</span></div>`).join("");
+      tip.hidden = false;
+      const w = tip.offsetWidth, h = tip.offsetHeight;
+      let tx = pt.clientX + 16, ty = pt.clientY + 16;
+      if (tx + w > window.innerWidth - 8) tx = pt.clientX - w - 16;
+      if (ty + h > window.innerHeight - 8) ty = pt.clientY - h - 16;
+      tip.style.left = Math.max(8, tx) + "px"; tip.style.top = Math.max(8, ty) + "px";
+    }
+    function leave(){ line.setAttribute("visibility", "hidden"); dots.forEach(d => d.setAttribute("visibility", "hidden")); tip.hidden = true; }
+    svg.addEventListener("mousemove", move);
+    svg.addEventListener("mouseleave", leave);
+    svg.addEventListener("touchmove", move, { passive: true });
+    svg.addEventListener("touchend", leave);
+  }
+
+  // ---------- 화면 ----------
+  function renderChips(){
+    const box = document.getElementById("chips");
+    if (!cmp.tickers.length){ box.innerHTML = `<span class="chips-empty">종목을 추가하세요. 벤치마크만 표시됩니다.</span>`; return; }
+    const port = cmp.mode === "port";
+    box.innerHTML = cmp.tickers.map(t => `<span class="chip">
+        <span class="sw" style="background:${colorOf(t)}"></span><span class="tk">${t}</span><span class="nm" title="${esc(TK[t].n)}">${esc(TK[t].n)}</span>
+        ${port ? `<input type="number" min="0" max="100" step="5" value="${+(cmp.weights[t] ?? (100 / cmp.tickers.length)).toFixed(1)}" data-w="${t}" aria-label="${t} 비중(%)">%` : ""}
+        <button type="button" class="x" data-rm="${t}" aria-label="${t} 빼기">✕</button></span>`).join("");
+    box.querySelectorAll("[data-rm]").forEach(b => b.addEventListener("click", () => {
+      cmp.tickers = cmp.tickers.filter(t => t !== b.dataset.rm); delete cmp.weights[b.dataset.rm]; renderCompare();
+    }));
+    box.querySelectorAll("[data-w]").forEach(inp => inp.addEventListener("change", () => {
+      cmp.weights[inp.dataset.w] = parseFloat(inp.value) || 0;
+      cmp.tickers.forEach(t => { if (cmp.weights[t] == null) cmp.weights[t] = 100 / cmp.tickers.length; });
+      renderCompare();
+    }));
+  }
+
+  function renderTiles(res){
+    const box = document.getElementById("cmpTiles");
+    const main = res.series.filter(sr => sr.kind === "port" || sr.kind === "each");
+    const bench = res.series.find(sr => sr.kind === "bench");
+    if (!main.length){ box.innerHTML = ""; return; }
+    const best = [...main].sort((a, b) => b.st.cagr - a.st.cagr)[0];
+    const safest = [...main].sort((a, b) => b.st.mdd - a.st.mdd)[0];
+    const months = res.e - res.s;
+    const name = sr => sr.kind === "port" ? "포트폴리오" : sr.key;
+    box.innerHTML = `
+      <div class="stat-tile"><span class="label">기간</span><span class="value" style="font-size:clamp(15px,2vw,19px);">${fmtM(MONTHS[res.s])} → ${fmtM(MONTHS[res.e])}</span><span class="sub">${months}개월 (${(months / 12).toFixed(1)}년)</span></div>
+      <div class="stat-tile"><span class="label">${main.length > 1 ? "연평균 수익률 1위" : "연평균 수익률(CAGR)"}</span><span class="value" style="color:${best.st.cagr>=0?"var(--up)":"var(--down)"}">${pctS(best.st.cagr, 2)}</span><span class="sub">${name(best)} · 최종 ${fmtUsd0(best.st.final)}</span></div>
+      <div class="stat-tile"><span class="label">${main.length > 1 ? "최대낙폭이 가장 얕은 종목" : "최대낙폭(MDD)"}</span><span class="value">${safest.st.mdd.toFixed(1)}%</span><span class="sub">${name(safest)}</span></div>
+      <div class="stat-tile"><span class="label">벤치마크 ${bench ? cmp.bench : ""}</span><span class="value" style="color:${bench ? (bench.st.cagr>=0?"var(--up)":"var(--down)") : "var(--muted)"}">${bench ? pctS(bench.st.cagr, 2) : "–"}</span><span class="sub">${bench ? "CAGR · MDD " + bench.st.mdd.toFixed(1) + "%" : "벤치마크 없음"}</span></div>`;
+  }
+
+  function renderLegend(res){
+    document.getElementById("cmpLegend").innerHTML = res.series.map(sr => `<div class="legend-item">
+      <span class="legend-swatch ${sr.kind === "bench" ? "dash" : ""}" style="background:${sr.color};${sr.kind === "member" ? "opacity:.55;height:2px;" : ""}${sr.kind === "port" ? "height:4px;" : ""}"></span>${esc(sr.kind === "port" ? "포트폴리오" : sr.label)}</div>`).join("");
+    const port = res.series.find(sr => sr.kind === "port");
+    document.getElementById("cmpChartSub").textContent = port
+      ? port.label + " · 리밸런싱 " + ({ m: "매월", y: "매년", none: "안 함" }[cmp.rebal]) + " · 얇은 선은 구성 종목을 각각 샀을 때"
+      : "각 종목을 기간 시작에 $10,000씩 샀을 때 · 점선은 벤치마크";
+  }
+
+  function renderStats(res){
+    const bench = res.series.find(sr => sr.kind === "bench");
+    document.getElementById("statBody").innerHTML = res.series.map(sr => {
+      const s = sr.st;
+      const name = sr.kind === "port" ? "포트폴리오" : (sr.kind === "bench" ? cmp.bench + " <span class='tag'>벤치마크</span>" : `${sr.key} <span style="color:var(--muted);font-size:11px;">${esc(TK[sr.key].n)}</span>${sr.kind === "member" ? " <span class='tag'>구성</span>" : ""}`);
+      const diff = bench && sr.kind !== "bench" ? s.cagr - bench.st.cagr : null;
+      return `<tr class="${sr.kind}">
+        <td class="name"><span class="sw" style="background:${sr.color}"></span>${name}</td>
+        <td class="num">${fmtUsd0(s.final)}</td>
+        <td class="num ${cls(s.total)}">${pctS(s.total, 1)}</td>
+        <td class="num ${cls(s.cagr)}">${pctS(s.cagr, 2)}</td>
+        <td class="num">${s.vol.toFixed(1)}%</td>
+        <td class="num">${s.mdd.toFixed(1)}%</td>
+        <td class="num">${s.sharpe == null ? "–" : s.sharpe.toFixed(2)}</td>
+        <td class="num ${cls(s.best)}">${pctS(s.best, 1)}</td>
+        <td class="num ${cls(s.worst)}">${pctS(s.worst, 1)}</td>
+        <td class="num">${s.upRatio == null ? "–" : s.upRatio.toFixed(0) + "%"}</td>
+        <td class="num ${cls(diff)}">${diff == null ? "–" : (diff>=0?"+":"") + diff.toFixed(2) + "%p"}</td></tr>`;
+    }).join("");
+  }
+
+  function renderYears(res){
+    const shown = res.series;
+    const head = document.getElementById("yrHead"), body = document.getElementById("yrBody");
+    head.innerHTML = `<tr><th>연도</th>` + shown.map(sr => `<th class="num"><span class="sw" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${sr.color};margin-right:5px;"></span>${sr.kind === "port" ? "포트" : (sr.kind === "bench" ? cmp.bench : sr.key)}</th>`).join("") + `</tr>`;
+    const rows = [];
+    let k0 = 0;
+    for (let k = 1; k <= res.e - res.s; k++){
+      const ym = MONTHS[res.s + k];
+      const isLast = k === res.e - res.s;
+      if (ym.slice(4) === "12" || isLast){
+        const partial = MONTHS[res.s + k0].slice(4) !== "12" || ym.slice(4) !== "12";
+        rows.push({ year: ym.slice(0, 4), partial, vals: shown.map(sr => (sr.nav[k] / sr.nav[k0] - 1) * 100) });
+        k0 = k;
+      }
+    }
+    body.innerHTML = rows.reverse().map(r => `<tr><td class="mono">${r.year}${r.partial ? "*" : ""}</td>` +
+      r.vals.map(v => `<td class="num ${cls(v)}">${pctS(v, 1)}</td>`).join("") + `</tr>`).join("");
+  }
+
+  function renderCompare(){
+    startSel.value = cmp.start; endSel.value = cmp.end; benchSel.value = cmp.bench;
+    setSeg("mode", cmp.mode); setSeg("rebal", cmp.rebal); setSeg("scale", cmp.scale);
+    document.getElementById("rebalGroup").hidden = cmp.mode !== "port";
+    document.getElementById("modeHint").textContent = cmp.mode === "port"
+      ? "고른 종목을 아래 비중(%)대로 묶어 하나의 포트폴리오로 계산합니다."
+      : "각 종목을 따로 샀을 때를 나란히 비교합니다.";
+    if (cmp.mode === "port"){
+      const sum = cmp.tickers.reduce((a, t) => a + (parseFloat(cmp.weights[t] ?? (100 / cmp.tickers.length)) || 0), 0);
+      document.getElementById("weightSum").textContent = "비중 합계 " + sum.toFixed(1) + "%";
+    }
+    renderChips();
+    const res = compute();
+    document.getElementById("cmpNotes").innerHTML = res.notes.map(n => `<div>⚠ ${esc(n)}</div>`).join("");
+    renderTiles(res); renderLegend(res); drawMain(res); drawDD(res); renderStats(res); renderYears(res);
+    save();
+  }
+
+  renderCompare();
+}
+
+
+function showTab(name){
+  document.querySelectorAll(".tabs button[data-tab]").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === name)));
+  document.getElementById("pane-rotation").hidden = name !== "rotation";
+  document.getElementById("pane-compare").hidden = name !== "compare";
+  try { localStorage.setItem("btTab", name); } catch (e) {}
+}
+
+async function main(){
+  const DATA = await (await fetch("data.json", { cache: "no-store" })).json();
+  const raw = {};
+  for (const code in DATA.rotation){
+    const p = DATA.tickers[code] ? DATA.tickers[code].p : [];
+    raw[code] = { ...DATA.rotation[code], prices: DATA.months.map((m, i) => [m, p[i]]).filter(x => x[1] != null) };
+  }
+  const last = DATA.lastMonth.slice(0, 4) + "." + DATA.lastMonth.slice(4);
+  document.getElementById("updatedAt").textContent = "마지막 데이터: " + last + " 월말 · 갱신 " + DATA.updated + " · 매월 1일 아침 자동 갱신";
+  document.querySelectorAll(".lastMonthNote").forEach(e => e.textContent = last);
+  initRotation(raw);
+  initCompare(DATA);
+  document.querySelectorAll(".tabs button[data-tab]").forEach(b => b.addEventListener("click", () => showTab(b.dataset.tab)));
+  let tab = location.hash === "#compare" ? "compare" : "rotation";
+  try { if (!location.hash) tab = localStorage.getItem("btTab") || tab; } catch (e) {}
+  showTab(tab === "compare" ? "compare" : "rotation");
+}
+main().catch(e => {
+  document.getElementById("updatedAt").innerHTML = '<span class="load-error">데이터를 불러오지 못했습니다: ' + e.message + '</span>';
+  console.error(e);
+});
+</script>
+</body>
+</html>
