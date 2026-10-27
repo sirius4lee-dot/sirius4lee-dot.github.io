@@ -337,6 +337,21 @@ td.mono, th.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;
 .stat-table tr.bench td{color:var(--ink-2);}
 .stat-table tr.port td{font-weight:600;}
 .yr-table td.num,.yr-table th.num{text-align:right;font-family:var(--font-mono);font-variant-numeric:tabular-nums;}
+.corr-wrap{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:20px;align-items:start;}
+.corr-table{min-width:0;width:auto;}
+.corr-table th,.corr-table td{text-align:center;padding:7px 6px;white-space:nowrap;}
+.corr-table thead th{text-transform:none;letter-spacing:0;font-family:var(--font-mono);}
+.corr-table td.cell{font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-size:12.5px;border:2px solid var(--surface);border-radius:6px;min-width:56px;cursor:default;}
+.corr-table td.rowh{text-align:left;font-family:var(--font-mono);font-weight:600;}
+.corr-table td.avg{font-family:var(--font-mono);color:var(--ink-2);border-left:1px solid var(--border-strong);}
+.corr-table tbody tr:hover{background:transparent;}
+.corr-bar{background:linear-gradient(90deg,var(--down),var(--surface-2),var(--up))!important;}
+.corr-side{display:flex;flex-direction:column;gap:14px;font-size:13px;}
+.corr-side h3{font-size:12px;color:var(--muted);font-weight:600;margin:0 0 6px;}
+.corr-side .pair{display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-bottom:1px dashed var(--border);}
+.corr-side .pair .v{font-family:var(--font-mono);font-weight:600;}
+.corr-side .box{background:var(--surface-2);border-radius:10px;padding:10px 12px;line-height:1.55;color:var(--ink-2);}
+@media (max-width:760px){ .corr-wrap{grid-template-columns:1fr;} }
 
 </style>
 </head>
@@ -570,6 +585,28 @@ td.mono, th.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;
           <tbody id="statBody"></tbody>
         </table>
       </div>
+    </section>
+
+    <section class="panel">
+      <div class="chart-header">
+        <h2>상관계수 (월간 수익률 기준)</h2>
+        <div class="segmented" data-cmp="corrWin" role="group" style="min-width:260px;">
+          <button data-value="all" class="active" type="button">전체 기간</button>
+          <button data-value="36" type="button">최근 3년</button>
+          <button data-value="12" type="button">최근 1년</button>
+        </div>
+      </div>
+      <p class="chart-sub" id="corrSub"></p>
+      <div class="corr-wrap">
+        <div class="table-scroll">
+          <table class="corr-table">
+            <thead id="corrHead"></thead>
+            <tbody id="corrBody"></tbody>
+          </table>
+        </div>
+        <div class="corr-side" id="corrSide"></div>
+      </div>
+      <div class="heat-scale"><span>-1 반대로 움직임</span><span class="bar corr-bar"></span><span>+1 똑같이 움직임</span></div>
     </section>
 
     <section class="panel">
@@ -1059,7 +1096,7 @@ function initCompare(DATA){
   ];
   const PERIOD_PRESETS = [["1년",12],["3년",36],["5년",60],["10년",120],["전체",null]];
 
-  const cmp = { tickers: ["NVDA","AAPL","MSFT"], mode: "each", weights: {}, rebal: "m", bench: "SPY",
+  const cmp = { tickers: ["NVDA","AAPL","MSFT"], mode: "each", weights: {}, rebal: "m", bench: "SPY", corrWin: "all",
                 start: MONTHS[Math.max(0, MONTHS.length - 121)], end: MONTHS[MONTHS.length - 1], scale: "log" };
   try {
     const saved = JSON.parse(localStorage.getItem("cmpState") || "null");
@@ -1425,6 +1462,117 @@ function initCompare(DATA){
     }).join("");
   }
 
+  // ---------- 상관계수 ----------
+  function corr(a, b){
+    const n = a.length;
+    const ma = a.reduce((x, y) => x + y, 0) / n, mb = b.reduce((x, y) => x + y, 0) / n;
+    let cov = 0, va = 0, vb = 0;
+    for (let i = 0; i < n; i++){ cov += (a[i] - ma) * (b[i] - mb); va += (a[i] - ma) ** 2; vb += (b[i] - mb) ** 2; }
+    return { r: va > 0 && vb > 0 ? cov / Math.sqrt(va * vb) : null, beta: vb > 0 ? cov / vb : null };
+  }
+  function monthlyRets(t, s, e){
+    const px = seriesPrices(t, s, e);
+    return px.slice(1).map((v, k) => v / px[k] - 1);
+  }
+  function corrBg(r){
+    if (r == null) return "transparent";
+    return `color-mix(in srgb, ${r >= 0 ? "var(--up)" : "var(--down)"} ${Math.round(Math.abs(r) * 65)}%, var(--surface-2))`;
+  }
+  function corrWord(r){
+    const a = Math.abs(r);
+    const strength = a >= 0.8 ? "매우 강한" : a >= 0.6 ? "강한" : a >= 0.4 ? "보통" : a >= 0.2 ? "약한" : "거의 없는";
+    return strength + (a < 0.2 ? " 상관" : (r >= 0 ? " 양(+)의 상관" : " 음(-)의 상관"));
+  }
+
+  function renderCorr(res){
+    const head = document.getElementById("corrHead"), body = document.getElementById("corrBody");
+    const side = document.getElementById("corrSide"), sub = document.getElementById("corrSub");
+    const names = [...cmp.tickers, ...(cmp.bench !== "none" && TK[cmp.bench] && !cmp.tickers.includes(cmp.bench) ? [cmp.bench] : [])];
+    if (!res.series.length || names.length < 2){
+      head.innerHTML = ""; body.innerHTML = "";
+      side.innerHTML = `<div class="box">종목을 2개 이상 고르거나 벤치마크를 켜면 상관계수가 계산됩니다.</div>`;
+      sub.textContent = ""; return;
+    }
+    const win = cmp.corrWin === "all" ? null : parseInt(cmp.corrWin, 10);
+    const s = win ? Math.max(res.s, res.e - win) : res.s, e = res.e;
+    const n = e - s;
+    const rets = Object.fromEntries(names.map(t => [t, monthlyRets(t, s, e)]));
+    const M = names.map(a => names.map(b => a === b ? { r: 1 } : corr(rets[a], rets[b])));
+    sub.textContent = `${fmtM(MONTHS[s])} → ${fmtM(MONTHS[e])} · ${n}개월 수익률로 계산 · 1에 가까울수록 같이 오르내리고, 0에 가까울수록 따로 움직이며, 음수면 반대로 움직입니다.` +
+      (win && res.s > res.e - win ? " (선택 기간이 더 짧아서 선택 기간 전체를 사용)" : "") + (n < 24 ? " ⚠ 24개월 미만이라 수치가 불안정할 수 있습니다." : "");
+    const isBench = t => t === cmp.bench && !cmp.tickers.includes(t);
+    const dot = t => isBench(t) ? `<span style="color:var(--muted);">${t}</span>` : `<span class="sw" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${colorOf(t)};margin-right:5px;"></span>${t}`;
+    const picked = cmp.tickers;
+    head.innerHTML = `<tr><th></th>${names.map(t => `<th>${dot(t)}</th>`).join("")}${picked.length > 1 ? `<th title="다른 선택 종목들과의 평균 상관계수">평균</th>` : ""}</tr>`;
+    body.innerHTML = names.map((a, i) => {
+      const others = picked.filter(b => b !== a).map(b => M[i][names.indexOf(b)].r).filter(v => v != null);
+      const avg = others.length ? others.reduce((x, y) => x + y, 0) / others.length : null;
+      return `<tr><td class="rowh">${dot(a)}</td>` + names.map((b, j) => {
+        const r = M[i][j].r;
+        return `<td class="cell" data-i="${i}" data-j="${j}" style="background:${i === j ? "transparent" : corrBg(r)};${i === j ? "color:var(--muted);" : ""}">${r == null ? "–" : r.toFixed(2)}</td>`;
+      }).join("") + (picked.length > 1 ? `<td class="avg">${!isBench(a) && avg != null ? avg.toFixed(2) : ""}</td>` : "") + `</tr>`;
+    }).join("");
+    body.querySelectorAll("td.cell").forEach(td => {
+      const i = +td.dataset.i, j = +td.dataset.j;
+      if (i === j) return;
+      const a = names[i], b = names[j], c = M[i][j];
+      td.addEventListener("mousemove", ev => {
+        tip.innerHTML = `<div class="tt-date">${a} ↔ ${b}</div><div class="tt-row"><span class="k">상관계수</span><span>${c.r.toFixed(3)}</span></div>` +
+          `<div class="tt-row"><span class="k">해석</span><span>${corrWord(c.r)}</span></div>` +
+          (isBench(b) ? `<div class="tt-row"><span class="k">${a}의 베타(vs ${b})</span><span>${c.beta.toFixed(2)}</span></div>` : "") +
+          `<div class="tt-row"><span class="k">기간</span><span>${n}개월</span></div>`;
+        tip.hidden = false;
+        const w = tip.offsetWidth, h = tip.offsetHeight;
+        let tx = ev.clientX + 14, ty = ev.clientY + 14;
+        if (tx + w > window.innerWidth - 8) tx = ev.clientX - w - 14;
+        if (ty + h > window.innerHeight - 8) ty = ev.clientY - h - 14;
+        tip.style.left = Math.max(8, tx) + "px"; tip.style.top = Math.max(8, ty) + "px";
+      });
+      td.addEventListener("mouseleave", () => { tip.hidden = true; });
+    });
+
+    // 오른쪽 요약: 선택 종목끼리의 쌍 순위, 벤치마크 베타, 포트폴리오 분산 효과
+    const pairs = [];
+    for (let i = 0; i < picked.length; i++) for (let j = i + 1; j < picked.length; j++){
+      const r = M[names.indexOf(picked[i])][names.indexOf(picked[j])].r;
+      if (r != null) pairs.push({ a: picked[i], b: picked[j], r });
+    }
+    pairs.sort((x, y) => x.r - y.r);
+    const pairRow = p => `<div class="pair"><span>${p.a} ↔ ${p.b}</span><span class="v ${p.r >= 0 ? "ret-up" : "ret-down"}">${p.r.toFixed(2)}</span></div>`;
+    let html = "";
+    if (pairs.length){
+      html += `<div><h3>가장 따로 움직이는 쌍 (분산 효과 큼)</h3>${pairs.slice(0, 3).map(pairRow).join("")}</div>`;
+      if (pairs.length > 3) html += `<div><h3>가장 같이 움직이는 쌍 (분산 효과 작음)</h3>${pairs.slice(-3).reverse().map(pairRow).join("")}</div>`;
+      const avgAll = pairs.reduce((x, p) => x + p.r, 0) / pairs.length;
+      html += `<div class="box">선택 종목끼리 평균 상관계수 <strong>${avgAll.toFixed(2)}</strong> — ${corrWord(avgAll)}. ` +
+        (avgAll >= 0.7 ? "종목 수는 여러 개지만 사실상 한 방향으로 움직여 분산 효과가 작습니다." :
+         avgAll >= 0.4 ? "어느 정도 분산은 되지만, 상관이 낮은 자산(채권·금 등)을 섞으면 낙폭을 더 줄일 수 있습니다." :
+         "서로 다르게 움직이는 편이라 분산 효과가 큰 조합입니다.") + `</div>`;
+    }
+    const bIdx = names.indexOf(cmp.bench);
+    if (bIdx >= 0 && isBench(cmp.bench) && picked.length){
+      html += `<div><h3>${cmp.bench} 대비 베타 (시장이 1% 움직일 때)</h3>` + picked.map(t => {
+        const c = M[names.indexOf(t)][bIdx];
+        return `<div class="pair"><span>${t}</span><span class="v">${c.beta == null ? "–" : c.beta.toFixed(2)} <span style="color:var(--muted);font-weight:500;">(r ${c.r == null ? "–" : c.r.toFixed(2)})</span></span></div>`;
+      }).join("") + `</div>`;
+    }
+    if (cmp.mode === "port" && picked.length > 1){
+      const raw = picked.map(t => Math.max(0, parseFloat(cmp.weights[t] ?? (100 / picked.length)) || 0));
+      const sum = raw.reduce((a, b) => a + b, 0) || 1;
+      const w = raw.map(x => x / sum);
+      const sd = t => { const r = rets[t], m = r.reduce((a, b) => a + b, 0) / r.length; return Math.sqrt(r.reduce((a, b) => a + (b - m) ** 2, 0) / (r.length - 1)); };
+      const sds = picked.map(sd);
+      const weighted = w.reduce((a, x, i) => a + x * sds[i], 0);
+      let pv = 0;
+      for (let i = 0; i < picked.length; i++) for (let j = 0; j < picked.length; j++)
+        pv += w[i] * w[j] * sds[i] * sds[j] * M[names.indexOf(picked[i])][names.indexOf(picked[j])].r;
+      const portSd = Math.sqrt(Math.max(pv, 0));
+      html += `<div class="box"><strong>분산 효과 (현재 비중 기준)</strong><br>종목 변동성의 가중평균 ${(weighted * Math.sqrt(12) * 100).toFixed(1)}% → 포트폴리오 변동성 ${(portSd * Math.sqrt(12) * 100).toFixed(1)}% ` +
+        `(<strong>${((1 - portSd / weighted) * 100).toFixed(0)}% 감소</strong>). 상관계수가 낮을수록 이 감소폭이 커집니다.</div>`;
+    }
+    side.innerHTML = html;
+  }
+
   function renderYears(res){
     const shown = res.series;
     const head = document.getElementById("yrHead"), body = document.getElementById("yrBody");
@@ -1462,7 +1610,8 @@ function initCompare(DATA){
         (cmp.tickers.length < 2 ? "<br>종목이 1개면 리밸런싱 방식과 무관하게 결과가 같습니다." : "");
     }
     document.getElementById("cmpNotes").innerHTML = res.notes.map(n => `<div>⚠ ${esc(n)}</div>`).join("");
-    renderTiles(res); renderLegend(res); drawMain(res); drawDD(res); renderStats(res); renderYears(res);
+    setSeg("corrWin", cmp.corrWin);
+    renderTiles(res); renderLegend(res); drawMain(res); drawDD(res); renderStats(res); renderCorr(res); renderYears(res);
     save();
   }
 
