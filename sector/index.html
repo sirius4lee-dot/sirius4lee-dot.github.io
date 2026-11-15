@@ -7,6 +7,10 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
 .page-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;}
+.tabs{display:inline-flex;gap:4px;padding:4px;border-radius:12px;background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow);flex-wrap:wrap;}
+.tabs a{color:var(--ink-2);font-size:13.5px;font-weight:600;padding:8px 16px;border-radius:9px;text-decoration:none;}
+.tabs a:hover{background:var(--surface-2);}
+.tabs a[aria-current="page"]{background:var(--accent);color:var(--accent-ink);}
 .updated{font-size:12px;color:var(--muted);}
 .load-error{color:var(--critical);font-size:14px;}
 :root{
@@ -293,9 +297,15 @@ td.mono, th.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;
 <body>
 <div class="page">
   <div class="page-head">
-    <span class="updated" id="updatedAt">불러오는 중…</span>
-    <a class="crosslink" href="../backtest/">미국 주식 백테스터 (섹터 로테이션·종목 비교) →</a>
+    <nav class="tabs" aria-label="화면 선택">
+      <a href="../backtest/#rotation">섹터 로테이션</a>
+      <a href="../backtest/#compare">종목 비교 백테스트</a>
+      <a href="../backtest/#haa">HAA 자산배분</a>
+      <a href="./" aria-current="page">섹터 데일리</a>
+    </nav>
+    <a class="crosslink" href="https://claude.ai/artifact/6Jpkxx2pSVA3BBqYL6Nsxf">🇰🇷 한국 ETF 로테이션 백테스터 →</a>
   </div>
+  <div class="updated" id="updatedAt">불러오는 중…</div>
   <div class="tab-pane" id="pane-daily">
     <header class="hero">
       <div class="eyebrow">Finviz 11개 섹터 · 미국 상장 주식 전체 · 시가총액 기준</div>
