@@ -368,6 +368,21 @@ td.mono, th.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;
 .memo-item .acts{display:flex;gap:6px;justify-content:flex-end;}
 .memo-item textarea{min-height:60px;}
 .memo-empty{font-size:12.5px;color:var(--muted);}
+
+.haa-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start;}
+.haa-h3{font-size:12px;color:var(--muted);font-weight:600;margin:0 0 8px;}
+.haa-hold{display:flex;flex-direction:column;gap:8px;}
+.haa-hold-row{display:grid;grid-template-columns:minmax(120px,1fr) 1.2fr 44px;align-items:center;gap:10px;font-size:13px;}
+.haa-hold-row .tk{font-family:var(--font-mono);font-weight:700;}
+.haa-hold-row .w{font-family:var(--font-mono);font-weight:700;text-align:right;}
+.haa-hold-bar{height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden;}
+.haa-hold-bar span{display:block;height:100%;background:var(--s1);border-radius:0 4px 4px 0;}
+.nm{color:var(--muted);font-size:11.5px;}
+.haa-mom-table{min-width:520px;}
+.haa-mom-table td.num,.haa-mom-table th.num{text-align:right;font-family:var(--font-mono);font-variant-numeric:tabular-nums;white-space:nowrap;}
+#pane-haa .two-col > .panel{min-width:0;}
+.haa-mom-table td:nth-child(-n+2){white-space:nowrap;}
+@media (max-width:760px){ .haa-grid{grid-template-columns:1fr;} }
 .memo-note{font-size:11.5px;color:var(--muted);margin:0;line-height:1.5;}
 
 </style>
@@ -378,7 +393,8 @@ td.mono, th.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;
     <div class="tabs" role="tablist" aria-label="화면 선택">
       <button type="button" role="tab" data-tab="rotation" aria-selected="true">섹터 로테이션</button>
       <button type="button" role="tab" data-tab="compare" aria-selected="false">종목 비교 백테스트</button>
-      <a href="../sector/">섹터 데일리 ↗</a>
+      <button type="button" role="tab" data-tab="haa" aria-selected="false">HAA 자산배분</button>
+      <a href="../sector/">섹터 데일리</a>
     </div>
     <a class="crosslink" href="https://claude.ai/artifact/6Jpkxx2pSVA3BBqYL6Nsxf">🇰🇷 한국 ETF 로테이션 백테스터 →</a>
   </div>
@@ -396,7 +412,7 @@ td.mono, th.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;
         <label>모멘텀 스코어 산출 방식</label>
         <div class="segmented" data-control="weight" role="group">
           <button data-value="vaa" class="active" type="button">VAA 고전식 (12·4·2·1)</button>
-          <button data-value="equal3" type="button">3·6·12개월 균등</button>
+          <button data-value="equal4" type="button">1·3·6·12개월 균등 (HAA 방식)</button>
           <button data-value="m12" type="button">단순 12개월</button>
         </div>
       </div>
@@ -667,6 +683,131 @@ td.mono, th.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;
     </footer>
   </div>
 
+  <div class="tab-pane" id="pane-haa" hidden>
+    <header class="hero">
+      <div class="eyebrow">Hybrid Asset Allocation · Keller &amp; Keuning (2023) · 월간 리밸런싱</div>
+      <h1>HAA 자산배분 백테스터</h1>
+      <p>물가연동국채(TIP)를 "카나리아"로 써서 시장 위험을 먼저 감지하고, 괜찮으면 주식·리츠·원자재·채권 8개 자산 중 모멘텀이 강한 4개에, 위험하면 현금성 자산에 투자하는 전략입니다. 모멘텀은 1·3·6·12개월 수익률의 단순 평균입니다. 매월 1일 아침 지난달 월말 가격으로 자동 갱신되며, 아래 "이번 달 신호"가 이번 달에 보유할 자산입니다.</p>
+    </header>
+
+    <section class="panel controls" aria-label="HAA 설정">
+      <div class="control-row">
+        <div class="control-group">
+          <label>전략 변형</label>
+          <div class="segmented" data-haa="variant" role="group">
+            <button data-value="balanced" class="active" type="button">HAA-Balanced (8개 자산)</button>
+            <button data-value="simple" type="button">HAA-Simple (SPY만)</button>
+          </div>
+          <span class="hint" id="haaVariantHint"></span>
+        </div>
+        <div class="control-group" id="haaTopGroup">
+          <label>공격자산 편입 수</label>
+          <div class="segmented" data-haa="topN" role="group">
+            <button data-value="1" type="button">1</button>
+            <button data-value="2" type="button">2</button>
+            <button data-value="3" type="button">3</button>
+            <button data-value="4" class="active" type="button">4 (기본)</button>
+          </div>
+        </div>
+        <div class="control-group">
+          <label for="haaStart">백테스트 시작월</label>
+          <select id="haaStart"></select>
+          <span class="hint">2008년 금융위기를 보려면 가장 이른 달을 고르세요.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel haa-signal" aria-label="이번 달 신호">
+      <div class="chart-header">
+        <h2>이번 달 신호</h2>
+        <span class="holding-mode" id="haaModeBadge"></span>
+      </div>
+      <p class="chart-sub" id="haaSignalSub"></p>
+      <div class="haa-grid">
+        <div>
+          <h3 class="haa-h3">이번 달 보유 비중</h3>
+          <div id="haaHold" class="haa-hold"></div>
+          <h3 class="haa-h3" style="margin-top:16px;">카나리아 · 현금자산</h3>
+          <div class="table-scroll">
+            <table class="haa-mom-table">
+              <thead><tr><th>자산</th><th class="num">1개월</th><th class="num">3개월</th><th class="num">6개월</th><th class="num">12개월</th><th class="num">모멘텀</th><th>판정</th></tr></thead>
+              <tbody id="haaCanaryBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div>
+          <h3 class="haa-h3">공격자산 모멘텀 순위</h3>
+          <div class="table-scroll">
+            <table class="haa-mom-table">
+              <thead><tr><th>#</th><th>자산</th><th class="num">1개월</th><th class="num">3개월</th><th class="num">6개월</th><th class="num">12개월</th><th class="num">모멘텀</th><th>판정</th></tr></thead>
+              <tbody id="haaRankBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="stats-row" aria-label="HAA 성과" id="haaTiles"></section>
+
+    <section class="panel">
+      <div class="chart-header">
+        <h2>$10,000 투자 시 성장 (로그 스케일)</h2>
+        <div class="legend" id="haaLegend"></div>
+      </div>
+      <div class="chart-wrap">
+        <svg id="haaChart" viewBox="0 0 960 340" preserveAspectRatio="xMidYMid meet" role="img" aria-label="HAA 전략과 비교 대상의 누적 성장"></svg>
+      </div>
+      <h2 style="margin:22px 0 4px;font-size:15px;">낙폭 (고점 대비 하락률)</h2>
+      <p class="chart-sub">월말 기준. 회색 띠는 방어 모드(현금자산 100%)였던 달입니다.</p>
+      <div class="chart-wrap">
+        <svg id="haaDD" viewBox="0 0 960 170" preserveAspectRatio="xMidYMid meet" role="img" aria-label="HAA 낙폭"></svg>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>성과 지표</h2>
+      <div class="table-scroll">
+        <table class="stat-table">
+          <thead><tr><th>전략</th><th class="num">최종 금액</th><th class="num">연평균(CAGR)</th><th class="num">변동성(연)</th><th class="num">최대낙폭</th><th class="num">샤프 비율</th><th class="num">최악의 달</th><th class="num">상승한 달</th><th class="num">방어 모드 비율</th></tr></thead>
+          <tbody id="haaStatBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="two-col">
+      <div class="panel">
+        <h2>연도별 수익률</h2>
+        <div class="table-scroll">
+          <table class="yr-table">
+            <thead><tr><th>연도</th><th class="num">HAA</th><th class="num">SPY</th><th class="num">60/40</th></tr></thead>
+            <tbody id="haaYearBody"></tbody>
+          </table>
+        </div>
+        <p class="chart-sub" style="margin-top:8px;">* 표시는 1년 전체가 아닌 해입니다.</p>
+      </div>
+      <div class="panel">
+        <h2>월별 리밸런싱 로그</h2>
+        <div class="table-scroll log-table-wrap">
+          <table>
+            <thead><tr><th class="mono">월</th><th>모드</th><th>보유</th><th class="num">수익률</th></tr></thead>
+            <tbody id="haaLogBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <footer class="notes">
+      <h3>HAA 규칙과 이 백테스트의 전제</h3>
+      <ul>
+        <li><strong>모멘텀</strong> = (1개월 + 3개월 + 6개월 + 12개월 수익률) ÷ 4, 월말 조정종가(배당 재투자) 기준.</li>
+        <li><strong>카나리아 TIP 모멘텀 &gt; 0 → 공격 모드:</strong> SPY(미국 대형주)·IWM(소형주)·VEA(선진국)·VWO(신흥국)·VNQ(리츠)·DBC(원자재)·IEF(중기국채)·TLT(장기국채) 중 모멘텀 상위 4개에 25%씩. 뽑힌 자산의 모멘텀이 0 이하면 그 25%는 현금자산으로 대체합니다.</li>
+        <li><strong>TIP 모멘텀 ≤ 0 → 방어 모드:</strong> 100% 현금자산. <strong>현금자산</strong> = BIL(초단기 국채)과 IEF(중기국채) 중 모멘텀이 높은 쪽.</li>
+        <li><strong>HAA-Simple</strong>은 공격자산이 SPY 하나뿐인 버전입니다 (TIP이 괜찮고 SPY 모멘텀이 양수면 SPY 100%).</li>
+        <li><strong>비교 대상:</strong> SPY 단순 보유, 60/40 = SPY 60% + IEF 40% 매월 리밸런싱.</li>
+        <li>매월 말 신호로 다음 달 한 달을 보유한다고 가정합니다. 월중 낙폭, 매매수수료·환전 비용·세금(해외 ETF 양도소득세 22%)은 반영하지 않았습니다. 데이터는 2007년부터라 모든 자산의 12개월 모멘텀이 나오는 2008년 중반부터 백테스트됩니다. 투자 조언이 아닌 참고 자료입니다.</li>
+      </ul>
+    </footer>
+  </div>
 </div>
 <div class="float-tip" id="floatTip" hidden></div>
 <script>
@@ -687,7 +828,7 @@ const SECTOR_NAMES = Object.keys(SECTOR_MAP);
 
 const WEIGHT_PRESETS = {
   vaa:    {1:12, 3:4, 6:2, 12:1},
-  equal3: {3:1, 6:1, 12:1},
+  equal4: {1:1, 3:1, 6:1, 12:1},
   m12:    {12:1},
 };
 
@@ -1764,10 +1905,265 @@ function initCompare(DATA){
 }
 
 
+// ================= HAA (Hybrid Asset Allocation) =================
+// 규칙은 backtest/haa_signal.py(월간 ntfy 알림)와 같음
+function initHaa(DATA){
+  const MONTHS = DATA.months, TK = DATA.tickers;
+  const LOOKBACKS = [1, 3, 6, 12];
+  const OFFENSIVE = ["SPY", "IWM", "VEA", "VWO", "VNQ", "DBC", "IEF", "TLT"];
+  const CANARY = "TIP", CASH = ["BIL", "IEF"];
+  const NAMES = { SPY: "미국 대형주", IWM: "미국 소형주", VEA: "선진국 주식", VWO: "신흥국 주식", VNQ: "미국 리츠",
+                  DBC: "원자재", IEF: "미국 중기국채", TLT: "미국 장기국채", TIP: "물가연동국채", BIL: "초단기 국채(현금)" };
+  const hs = { variant: "balanced", topN: 4, start: null };
+  const fmtM = ym => ym.slice(0, 4) + "." + ym.slice(4, 6);
+  const pctS = (v, d = 1) => v == null || !isFinite(v) ? "–" : (v >= 0 ? "+" : "") + v.toFixed(d) + "%";
+  const cls = v => v == null ? "" : (v >= 0 ? "ret-up" : "ret-down");
+  const usd = n => "$" + Math.round(n).toLocaleString("en-US");
+
+  function lbRet(t, i, lb){
+    const p = TK[t].p;
+    if (i - lb < 0 || p[i] == null || p[i - lb] == null || !(p[i - lb] > 0)) return null;
+    return p[i] / p[i - lb] - 1;
+  }
+  function momentum(t, i){
+    const r = LOOKBACKS.map(lb => lbRet(t, i, lb));
+    return r.some(x => x == null) ? null : r.reduce((a, b) => a + b, 0) / r.length;
+  }
+  function offensiveSet(){ return hs.variant === "simple" ? ["SPY"] : OFFENSIVE; }
+  function topN(){ return hs.variant === "simple" ? 1 : hs.topN; }
+
+  // i번째 월말 기준 신호 → 다음 달 보유 비중
+  function haaSignal(i){
+    const off = offensiveSet(), n = topN();
+    const mom = {};
+    [...new Set([...off, ...CASH, CANARY])].forEach(t => mom[t] = momentum(t, i));
+    const cashC = CASH.filter(t => mom[t] != null);
+    const cash = cashC.sort((a, b) => mom[b] - mom[a])[0];
+    const canary = mom[CANARY];
+    const weights = {};
+    let mode, ranked = [];
+    if (canary != null && canary > 0){
+      mode = "offensive";
+      ranked = off.filter(t => mom[t] != null).sort((a, b) => mom[b] - mom[a]);
+      ranked.slice(0, n).forEach(t => { const tgt = mom[t] > 0 ? t : cash; weights[tgt] = (weights[tgt] || 0) + 1 / n; });
+    } else {
+      mode = "defensive";
+      ranked = off.filter(t => mom[t] != null).sort((a, b) => mom[b] - mom[a]);
+      weights[cash] = 1;
+    }
+    return { mode, weights, mom, canary, cash, ranked };
+  }
+  function firstValid(){
+    const need = [...offensiveSet(), ...CASH, CANARY];
+    for (let i = 0; i < MONTHS.length; i++) if (need.every(t => momentum(t, i) != null)) return i;
+    return MONTHS.length - 1;
+  }
+  const mret = (t, i) => TK[t].p[i + 1] / TK[t].p[i] - 1;
+
+  function run(){
+    const first = firstValid();
+    let s = hs.start ? MONTHS.indexOf(hs.start) : first;
+    if (s < first) s = first;
+    const e = MONTHS.length - 1;
+    const nav = [10000], spy = [10000], b6040 = [10000], log = [];
+    for (let i = s; i < e; i++){
+      const sig = haaSignal(i);
+      const r = Object.entries(sig.weights).reduce((a, [t, w]) => a + w * mret(t, i), 0);
+      nav.push(nav[nav.length - 1] * (1 + r));
+      spy.push(spy[spy.length - 1] * (1 + mret("SPY", i)));
+      b6040.push(b6040[b6040.length - 1] * (1 + 0.6 * mret("SPY", i) + 0.4 * mret("IEF", i)));
+      log.push({ ym: MONTHS[i + 1], mode: sig.mode, weights: sig.weights, r: r * 100 });
+    }
+    return { s, e, first, nav, spy, b6040, log };
+  }
+
+  function stats(nav, s){
+    const rets = nav.slice(1).map((v, k) => v / nav[k] - 1), n = rets.length;
+    const mean = rets.reduce((a, b) => a + b, 0) / n;
+    const sd = Math.sqrt(rets.reduce((a, b) => a + (b - mean) ** 2, 0) / (n - 1));
+    const ex = rets.map((r, k) => r - mret("BIL", s + k));
+    const em = ex.reduce((a, b) => a + b, 0) / n;
+    const esd = Math.sqrt(ex.reduce((a, b) => a + (b - em) ** 2, 0) / (n - 1));
+    let peak = -Infinity, mdd = 0;
+    const dd = nav.map(v => { peak = Math.max(peak, v); const d = (v / peak - 1) * 100; mdd = Math.min(mdd, d); return d; });
+    return { final: nav[n], cagr: (Math.pow(nav[n] / 10000, 12 / n) - 1) * 100, vol: sd * Math.sqrt(12) * 100,
+             sharpe: esd > 0 ? em / esd * Math.sqrt(12) : null, mdd, dd, worst: Math.min(...rets) * 100,
+             up: rets.filter(r => r > 0).length / n * 100 };
+  }
+
+  // ---------- 이번 달 신호 ----------
+  function renderSignal(){
+    const i = MONTHS.length - 1;
+    const sig = haaSignal(i);
+    const nextM = (parseInt(MONTHS[i].slice(4), 10) % 12) + 1;
+    const badge = document.getElementById("haaModeBadge");
+    badge.className = "holding-mode " + (sig.mode === "offensive" ? "offensive" : "defensive");
+    badge.innerHTML = `<span class="dot"></span>${sig.mode === "offensive" ? "공격 모드" : "방어 모드"}`;
+    document.getElementById("haaSignalSub").textContent =
+      `${fmtM(MONTHS[i])} 월말 가격 기준 → ${nextM}월 한 달 동안 보유할 자산입니다. 다음 갱신: ${nextM}월 말 가격이 나오는 다음 달 1일 아침.`;
+    const hold = Object.entries(sig.weights).sort((a, b) => b[1] - a[1]);
+    document.getElementById("haaHold").innerHTML = hold.map(([t, w]) => `
+      <div class="haa-hold-row"><div><span class="tk">${t}</span> <span class="nm">${NAMES[t] || TK[t].n}</span></div>
+      <div class="haa-hold-bar"><span style="width:${(w * 100).toFixed(0)}%"></span></div><div class="w">${(w * 100).toFixed(0)}%</div></div>`).join("");
+    const lbCells = t => LOOKBACKS.map(lb => { const v = lbRet(t, i, lb); return `<td class="num ${cls(v)}">${pctS(v == null ? null : v * 100)}</td>`; }).join("");
+    const momCell = t => `<td class="num ${cls(sig.mom[t])}" style="font-weight:700;">${pctS(sig.mom[t] == null ? null : sig.mom[t] * 100, 2)}</td>`;
+    document.getElementById("haaCanaryBody").innerHTML =
+      `<tr><td><strong>TIP</strong> <span class="nm">카나리아</span></td>${lbCells("TIP")}${momCell("TIP")}<td>${sig.canary > 0 ? `<span class="tag eligible">양수 → 공격</span>` : `<span class="tag safe">0 이하 → 방어</span>`}</td></tr>` +
+      CASH.map(t => `<tr><td><strong>${t}</strong> <span class="nm">${t === "BIL" ? "초단기 국채" : "중기국채"}</span></td>${lbCells(t)}${momCell(t)}<td>${t === sig.cash ? `<span class="tag eligible">현금자산으로 선택</span>` : ""}</td></tr>`).join("");
+    const n = topN();
+    document.getElementById("haaRankBody").innerHTML = sig.ranked.map((t, k) => {
+      let tag = "";
+      if (sig.mode === "offensive" && k < n) tag = sig.mom[t] > 0 ? `<span class="tag eligible">편입 ${(100 / n).toFixed(0)}%</span>` : `<span class="tag safe">음수 → ${sig.cash}로 대체</span>`;
+      else if (sig.mode === "defensive" && k < n) tag = `<span class="tag">방어 모드라 제외</span>`;
+      return `<tr><td class="rank-num">${k + 1}</td><td><strong>${t}</strong> <span class="nm">${NAMES[t]}</span></td>${lbCells(t)}${momCell(t)}<td>${tag}</td></tr>`;
+    }).join("");
+  }
+
+  // ---------- 차트 ----------
+  const ns = "http://www.w3.org/2000/svg";
+  const el = (tag, attrs, parent) => { const n = document.createElementNS(ns, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); parent.appendChild(n); return n; };
+  const tip = document.getElementById("floatTip");
+  function chart(svgId, H, series, s, opts){
+    const svg = document.getElementById(svgId);
+    svg.innerHTML = "";
+    const W = 960, P = { t: 12, r: 60, b: 26, l: 60 };
+    const n = series[0].v.length;
+    const all = series.flatMap(x => x.v);
+    const tf = opts.log ? Math.log10 : v => v;
+    let lo = tf(Math.min(...all)), hi = tf(Math.max(...all));
+    if (opts.dd){ hi = 0; lo = Math.min(lo, -5); }
+    const pad = opts.dd ? 0 : (hi - lo) * 0.06;
+    lo -= pad; hi += pad;
+    const x = k => P.l + k / (n - 1) * (W - P.l - P.r);
+    const y = v => P.t + (1 - (tf(v) - lo) / (hi - lo)) * (H - P.t - P.b);
+    // 방어 모드 구간 음영
+    if (opts.shade) opts.shade.forEach((def, k) => { if (def) el("rect", { x: x(k), y: P.t, width: Math.max(1, x(k + 1) - x(k)), height: H - P.t - P.b, fill: "var(--surface-2)" }, svg); });
+    const ticks = [];
+    if (opts.log){ for (let p = Math.floor(lo); p <= Math.ceil(hi); p++) for (const m of [1, 2, 5]){ const v = m * 10 ** p; if (Math.log10(v) >= lo && Math.log10(v) <= hi) ticks.push(v); } }
+    else { const step = opts.dd ? (lo < -40 ? 20 : lo < -20 ? 10 : 5) : 1; for (let v = 0; v >= lo; v -= step) ticks.push(v); }
+    ticks.forEach(v => {
+      el("line", { x1: P.l, x2: W - P.r, y1: y(v), y2: y(v), stroke: v === 0 && opts.dd ? "var(--border-strong)" : "var(--border)", "stroke-width": 1 }, svg);
+      el("text", { x: P.l - 8, y: y(v) + 3.5, "text-anchor": "end", "font-size": 10.5, fill: "var(--muted)", "font-family": "var(--font-mono)" }, svg)
+        .textContent = opts.dd ? v + "%" : (v >= 1000 ? "$" + (v / 1000).toFixed(0) + "K" : "$" + v);
+    });
+    const years = [];
+    for (let k = 0; k < n; k++) if (MONTHS[s + k].slice(4) === "01") years.push(k);
+    const every = Math.ceil(years.length / 9) || 1;
+    years.filter((_, j) => j % every === 0).forEach(k =>
+      el("text", { x: x(k), y: H - 7, "text-anchor": "middle", "font-size": 10.5, fill: "var(--muted)", "font-family": "var(--font-mono)" }, svg).textContent = MONTHS[s + k].slice(0, 4));
+    [...series].reverse().forEach(sr => el("polyline", { points: sr.v.map((v, k) => `${x(k).toFixed(1)},${y(v).toFixed(1)}`).join(" "), fill: "none",
+      stroke: sr.color, "stroke-width": sr.w || 2, "stroke-dasharray": sr.dash || "", "stroke-linejoin": "round" }, svg));
+    if (!opts.dd){
+      const labels = series.map(sr => ({ sr, y: y(sr.v[n - 1]) })).sort((a, b) => a.y - b.y);
+      for (let j = 1; j < labels.length; j++) if (labels[j].y - labels[j - 1].y < 13) labels[j].y = labels[j - 1].y + 13;
+      labels.forEach(l => {
+        el("circle", { cx: x(n - 1), cy: y(l.sr.v[n - 1]), r: 3.5, fill: l.sr.color, stroke: "var(--surface)", "stroke-width": 1.5 }, svg);
+        el("text", { x: x(n - 1) + 8, y: l.y + 3.5, "font-size": 11, fill: "var(--ink-2)", "font-family": "var(--font-mono)", "font-weight": 600 }, svg).textContent = l.sr.short;
+      });
+    }
+    const vline = el("line", { y1: P.t, y2: H - P.b, stroke: "var(--muted)", "stroke-width": 1, "stroke-dasharray": "3,3", visibility: "hidden" }, svg);
+    const dots = series.map(sr => el("circle", { r: 4, fill: sr.color, stroke: "var(--surface)", "stroke-width": 1.5, visibility: "hidden" }, svg));
+    const move = evt => {
+      const rect = svg.getBoundingClientRect(), pt = evt.touches ? evt.touches[0] : evt;
+      const k = Math.max(0, Math.min(n - 1, Math.round(((pt.clientX - rect.left) / rect.width * W - P.l) / (W - P.l - P.r) * (n - 1))));
+      vline.setAttribute("x1", x(k)); vline.setAttribute("x2", x(k)); vline.setAttribute("visibility", "visible");
+      series.forEach((sr, j) => { dots[j].setAttribute("cx", x(k)); dots[j].setAttribute("cy", y(sr.v[k])); dots[j].setAttribute("visibility", "visible"); });
+      const extra = opts.info ? opts.info(k) : "";
+      tip.innerHTML = `<div class="tt-date">${fmtM(MONTHS[s + k])}</div>` + series.map(sr =>
+        `<div class="tt-row"><span class="k">${sr.short}</span><span>${opts.dd ? sr.v[k].toFixed(1) + "%" : usd(sr.v[k])}</span></div>`).join("") + extra;
+      tip.hidden = false;
+      const w = tip.offsetWidth, h = tip.offsetHeight;
+      let tx = pt.clientX + 16, ty = pt.clientY + 16;
+      if (tx + w > window.innerWidth - 8) tx = pt.clientX - w - 16;
+      if (ty + h > window.innerHeight - 8) ty = pt.clientY - h - 16;
+      tip.style.left = Math.max(8, tx) + "px"; tip.style.top = Math.max(8, ty) + "px";
+    };
+    const leave = () => { vline.setAttribute("visibility", "hidden"); dots.forEach(d => d.setAttribute("visibility", "hidden")); tip.hidden = true; };
+    svg.addEventListener("mousemove", move); svg.addEventListener("mouseleave", leave);
+    svg.addEventListener("touchmove", move, { passive: true }); svg.addEventListener("touchend", leave);
+  }
+
+  // ---------- 화면 ----------
+  const holdText = w => Object.entries(w).sort((a, b) => b[1] - a[1]).map(([t, x]) => `${t} ${(x * 100).toFixed(0)}%`).join(", ");
+  function render(){
+    document.querySelectorAll("[data-haa]").forEach(g => g.querySelectorAll("button").forEach(b =>
+      b.classList.toggle("active", String(hs[g.dataset.haa]) === b.dataset.value)));
+    document.getElementById("haaTopGroup").hidden = hs.variant === "simple";
+    document.getElementById("haaVariantHint").textContent = hs.variant === "simple"
+      ? "공격 모드에서 SPY 하나만 보유 (모멘텀이 음수면 현금자산)."
+      : "SPY·IWM·VEA·VWO·VNQ·DBC·IEF·TLT 중 상위 자산을 같은 비중으로.";
+    const first = firstValid();
+    const sel = document.getElementById("haaStart");
+    sel.innerHTML = MONTHS.slice(first, MONTHS.length - 12).map(m => `<option value="${m}">${fmtM(m)} 부터</option>`).join("");
+    if (!hs.start || MONTHS.indexOf(hs.start) < first) hs.start = MONTHS[first];
+    sel.value = hs.start;
+
+    renderSignal();
+    const res = run();
+    const sH = stats(res.nav, res.s), sS = stats(res.spy, res.s), s64 = stats(res.b6040, res.s);
+    const defRatio = res.log.filter(l => l.mode === "defensive").length / res.log.length * 100;
+    const years = res.log.length / 12;
+    document.getElementById("haaTiles").innerHTML = `
+      <div class="stat-tile"><span class="label">최종 잔고</span><span class="value">${usd(sH.final)}</span><span class="sub">${fmtM(MONTHS[res.s])} 시작 $10,000 · ${years.toFixed(1)}년</span></div>
+      <div class="stat-tile"><span class="label">연평균(CAGR)</span><span class="value" style="color:${sH.cagr >= 0 ? "var(--up)" : "var(--down)"}">${pctS(sH.cagr, 2)}</span><span class="sub">SPY ${pctS(sS.cagr, 2)} · 60/40 ${pctS(s64.cagr, 2)}</span></div>
+      <div class="stat-tile"><span class="label">최대낙폭(MDD)</span><span class="value">${sH.mdd.toFixed(1)}%</span><span class="sub">SPY ${sS.mdd.toFixed(1)}% · 60/40 ${s64.mdd.toFixed(1)}%</span></div>
+      <div class="stat-tile"><span class="label">샤프 비율</span><span class="value">${sH.sharpe.toFixed(2)}</span><span class="sub">SPY ${sS.sharpe.toFixed(2)} · 방어 모드 ${defRatio.toFixed(0)}% 기간</span></div>`;
+    const series = [
+      { short: "HAA", label: hs.variant === "simple" ? "HAA-Simple" : `HAA-Balanced (상위 ${hs.topN})`, color: "var(--s1)", w: 2.6, v: res.nav, st: sH },
+      { short: "SPY", label: "SPY 단순 보유", color: "var(--s2)", w: 1.8, v: res.spy, st: sS },
+      { short: "60/40", label: "60/40 (SPY·IEF)", color: "var(--ink-2)", w: 1.6, dash: "6,4", v: res.b6040, st: s64 },
+    ];
+    document.getElementById("haaLegend").innerHTML = series.map(sr =>
+      `<div class="legend-item"><span class="legend-swatch ${sr.dash ? "dash" : ""}" style="background:${sr.color}"></span>${sr.label}</div>`).join("");
+    const shade = [false, ...res.log.map(l => l.mode === "defensive")];
+    const info = k => k === 0 ? "" : `<div class="tt-row"><span class="k">HAA 보유</span><span>${holdText(res.log[k - 1].weights)}</span></div>`;
+    chart("haaChart", 340, series, res.s, { log: true, info });
+    chart("haaDD", 170, series.map(sr => ({ ...sr, v: sr.st.dd, w: Math.min(sr.w, 2) })), res.s, { dd: true, shade });
+
+    document.getElementById("haaStatBody").innerHTML = series.map((sr, j) => `<tr class="${j === 0 ? "port" : ""}">
+      <td class="name"><span class="sw" style="background:${sr.color}"></span>${sr.label}</td>
+      <td class="num">${usd(sr.st.final)}</td><td class="num ${cls(sr.st.cagr)}">${pctS(sr.st.cagr, 2)}</td>
+      <td class="num">${sr.st.vol.toFixed(1)}%</td><td class="num">${sr.st.mdd.toFixed(1)}%</td>
+      <td class="num">${sr.st.sharpe.toFixed(2)}</td><td class="num ${cls(sr.st.worst)}">${pctS(sr.st.worst, 1)}</td>
+      <td class="num">${sr.st.up.toFixed(0)}%</td><td class="num">${j === 0 ? defRatio.toFixed(0) + "%" : "–"}</td></tr>`).join("");
+
+    const rows = [];
+    let k0 = 0;
+    for (let k = 1; k < res.nav.length; k++){
+      const ym = MONTHS[res.s + k];
+      if (ym.slice(4) === "12" || k === res.nav.length - 1){
+        rows.push({ y: ym.slice(0, 4), partial: MONTHS[res.s + k0].slice(4) !== "12" || ym.slice(4) !== "12",
+                    v: series.map(sr => (sr.v[k] / sr.v[k0] - 1) * 100) });
+        k0 = k;
+      }
+    }
+    document.getElementById("haaYearBody").innerHTML = rows.reverse().map(r =>
+      `<tr><td class="mono">${r.y}${r.partial ? "*" : ""}</td>${r.v.map(v => `<td class="num ${cls(v)}">${pctS(v, 1)}</td>`).join("")}</tr>`).join("");
+    document.getElementById("haaLogBody").innerHTML = [...res.log].reverse().map(l => `<tr>
+      <td class="mono">${fmtM(l.ym)}</td>
+      <td>${l.mode === "offensive" ? `<span class="tag">공격</span>` : `<span class="tag safe">방어</span>`}</td>
+      <td style="font-size:12px;">${holdText(l.weights)}</td>
+      <td class="num ${cls(l.r)}">${pctS(l.r, 2)}</td></tr>`).join("");
+  }
+
+  document.querySelectorAll("[data-haa]").forEach(g => g.querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
+    const key = g.dataset.haa;
+    hs[key] = key === "topN" ? parseInt(b.dataset.value, 10) : b.dataset.value;
+    if (key === "variant") hs.start = null;
+    render();
+  })));
+  document.getElementById("haaStart").addEventListener("change", e => { hs.start = e.target.value; render(); });
+  render();
+}
+
+const TABS = ["rotation", "compare", "haa"];
 function showTab(name){
   document.querySelectorAll(".tabs button[data-tab]").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === name)));
   document.getElementById("pane-rotation").hidden = name !== "rotation";
   document.getElementById("pane-compare").hidden = name !== "compare";
+  document.getElementById("pane-haa").hidden = name !== "haa";
+  // 섹터 데일리 등 다른 페이지에서 ../backtest/#haa 처럼 바로 들어올 수 있게 주소에 탭 표시
+  try { history.replaceState(null, "", "#" + name); } catch (e) {}
   try { localStorage.setItem("btTab", name); } catch (e) {}
 }
 
@@ -1783,10 +2179,12 @@ async function main(){
   document.querySelectorAll(".lastMonthNote").forEach(e => e.textContent = last);
   initRotation(raw);
   initCompare(DATA);
+  initHaa(DATA);
   document.querySelectorAll(".tabs button[data-tab]").forEach(b => b.addEventListener("click", () => showTab(b.dataset.tab)));
-  let tab = location.hash === "#compare" ? "compare" : "rotation";
-  try { if (!location.hash) tab = localStorage.getItem("btTab") || tab; } catch (e) {}
-  showTab(tab === "compare" ? "compare" : "rotation");
+  let tab = location.hash.slice(1);
+  if (!TABS.includes(tab)){ try { tab = localStorage.getItem("btTab"); } catch (e) {} }
+  showTab(TABS.includes(tab) ? tab : "rotation");
+  window.addEventListener("hashchange", () => { const t = location.hash.slice(1); if (TABS.includes(t)) showTab(t); });
 }
 main().catch(e => {
   document.getElementById("updatedAt").innerHTML = '<span class="load-error">데이터를 불러오지 못했습니다: ' + e.message + '</span>';
