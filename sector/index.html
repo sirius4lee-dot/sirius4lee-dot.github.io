@@ -303,7 +303,7 @@ td.mono, th.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;
       <a href="../backtest/#haa">HAA 자산배분</a>
       <a href="./" aria-current="page">섹터 데일리</a>
     </nav>
-    <a class="crosslink" href="https://claude.ai/artifact/6Jpkxx2pSVA3BBqYL6Nsxf">🇰🇷 한국 ETF 로테이션 백테스터 →</a>
+    <a class="crosslink" href="../kr/">🇰🇷 한국 ETF 백테스터 (모멘텀 로테이션·HAA 한국 계좌) →</a>
   </div>
   <div class="updated" id="updatedAt">불러오는 중…</div>
   <div class="tab-pane" id="pane-daily">
@@ -680,7 +680,8 @@ function openSectorPopup(s, p){
   const merged = rows.filter(x => x.t.includes("·")).map(x => x.t.replace("·", "/"));
   document.getElementById("sdNote").textContent =
     "섹터 내 비중 = 종목 시가총액 ÷ 섹터 시가총액 (Finviz, 전체 발행주식 기준). 시작 비중은 각자의 기간 등락률로 역산한 값입니다." +
-    (merged.length ? ` ${merged.join(", ")}는 같은 회사의 주식 클래스라 하나로 합쳤습니다.` : "");
+    (merged.length ? ` ${merged.join(", ")}는 같은 회사의 주식 클래스라 하나로 합쳤습니다.` : "") +
+    (s.topAsOf ? ` ⚠ 오늘은 Finviz 종목 목록을 받지 못해 상위 종목 정보는 ${fmtDate(s.topAsOf)} 기준입니다 (섹터 등락·비중은 오늘 값).` : "");
 
   if (typeof sectorDialog.showModal === "function"){
     if (!sectorDialog.open) sectorDialog.showModal();
