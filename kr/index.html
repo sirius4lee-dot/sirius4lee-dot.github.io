@@ -1,0 +1,1375 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>한국 ETF 백테스터</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  color-scheme: light;
+  --bg:#eef1f5;
+  --surface:#ffffff;
+  --surface-2:#eef1f5;
+  --ink:#12151c;
+  --ink-2:#4b5563;
+  --muted:#8a94a3;
+  --border:rgba(15,20,30,0.11);
+  --border-strong:rgba(15,20,30,0.18);
+  --accent:#2c6e49;
+  --accent-ink:#ffffff;
+  --accent-soft:#dcecdf;
+  --up:#c93a37;
+  --down:#2a78d6;
+  --cat-1:#2a78d6;
+  --cat-2:#eb6834;
+  --cat-3:#1baf7a;
+  --good:#0ca30c;
+  --warning:#a06400;
+  --serious:#ec835a;
+  --critical:#d03b3b;
+  --shadow: 0 1px 2px rgba(15,20,30,0.06), 0 8px 24px -12px rgba(15,20,30,0.18);
+  --font-sans: "IBM Plex Sans KR", "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --bg:#0a0d13;
+    --surface:#131826;
+    --surface-2:#1a2032;
+    --ink:#eef1f6;
+    --ink-2:#b7c0cd;
+    --muted:#7c8697;
+    --border:rgba(255,255,255,0.10);
+    --border-strong:rgba(255,255,255,0.18);
+    --accent:#4fae7d;
+    --accent-ink:#0b1710;
+    --accent-soft:#173a26;
+    --up:#e5726f;
+    --down:#5b9de8;
+    --cat-1:#3987e5;
+    --cat-2:#d95926;
+    --cat-3:#199e70;
+    --good:#3ecb3e;
+    --warning:#e6b23d;
+    --serious:#ec835a;
+    --critical:#e66767;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 28px -14px rgba(0,0,0,0.6);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#0a0d13;
+  --surface:#131826;
+  --surface-2:#1a2032;
+  --ink:#eef1f6;
+  --ink-2:#b7c0cd;
+  --muted:#7c8697;
+  --border:rgba(255,255,255,0.10);
+  --border-strong:rgba(255,255,255,0.18);
+  --accent:#4fae7d;
+  --accent-ink:#0b1710;
+  --accent-soft:#173a26;
+  --up:#e5726f;
+  --down:#5b9de8;
+  --cat-1:#3987e5;
+  --cat-2:#d95926;
+  --cat-3:#199e70;
+  --good:#3ecb3e;
+  --warning:#e6b23d;
+  --serious:#ec835a;
+  --critical:#e66767;
+  --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 28px -14px rgba(0,0,0,0.6);
+}
+
+*{box-sizing:border-box;}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--font-sans);
+  padding-inline:16px;
+  padding-block:28px 48px;
+}
+.page{max-width:1160px;margin:0 auto;display:flex;flex-direction:column;gap:20px;}
+
+h1,h2,h3{text-wrap:balance;margin:0;}
+::selection{background:var(--accent-soft);}
+a{color:var(--cat-1);}
+button{font-family:inherit;}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px;}
+
+.crosslink{
+  display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;
+  color:var(--ink-2);text-decoration:none;border:1px solid var(--border-strong);
+  border-radius:999px;padding:6px 12px;background:var(--surface);width:fit-content;
+}
+.crosslink:hover{background:var(--surface-2);}
+
+.eyebrow{font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--accent);}
+.hero h1{font-size:clamp(24px,4vw,32px);font-weight:700;margin-top:6px;}
+.hero p{color:var(--ink-2);font-size:15px;line-height:1.6;max-width:64ch;margin-top:10px;}
+
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;box-shadow:var(--shadow);}
+.panel h2{font-size:16px;font-weight:600;}
+.panel > h2{margin-bottom:14px;}
+
+.controls{display:flex;flex-direction:column;gap:16px;}
+.control-row{display:flex;flex-wrap:wrap;gap:20px;}
+.control-group{display:flex;flex-direction:column;gap:8px;flex:1 1 220px;min-width:0;}
+.control-group label{font-size:12px;font-weight:600;color:var(--ink-2);}
+.control-group .hint{font-size:11.5px;color:var(--muted);margin-top:-4px;}
+
+.segmented{display:flex;border:1px solid var(--border-strong);border-radius:10px;overflow:hidden;}
+.segmented button{flex:1;border:none;background:transparent;color:var(--ink-2);padding:9px 10px;font-size:13px;cursor:pointer;transition:background .15s,color .15s;border-right:1px solid var(--border);}
+.segmented button:last-child{border-right:none;}
+.segmented button:hover{background:var(--surface-2);}
+.segmented button.active{background:var(--accent);color:var(--accent-ink);font-weight:600;}
+
+select{
+  appearance:none;-webkit-appearance:none;background:var(--surface-2);color:var(--ink);
+  border:1px solid var(--border-strong);border-radius:10px;padding:9px 34px 9px 12px;
+  font-size:13px;font-family:var(--font-mono);cursor:pointer;
+  background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);
+  background-position:calc(100% - 18px) 55%, calc(100% - 13px) 55%;background-size:5px 5px,5px 5px;background-repeat:no-repeat;
+}
+
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+.stat-tile{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:4px;}
+.stat-tile .label{font-size:12px;color:var(--muted);font-weight:600;}
+.stat-tile .value{font-family:var(--font-mono);font-size:clamp(18px,2.6vw,24px);font-weight:600;font-variant-numeric:tabular-nums;}
+.stat-tile .sub{font-size:11.5px;color:var(--ink-2);}
+.stat-tile .sub.up{color:var(--up);}
+.stat-tile .sub.down{color:var(--down);}
+
+.chart-header{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:10px;}
+.legend{display:flex;gap:14px;flex-wrap:wrap;}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ink-2);}
+.legend-swatch{width:14px;height:3px;border-radius:2px;}
+.chart-wrap{position:relative;width:100%;}
+#equityChart{width:100%;height:auto;display:block;overflow:visible;}
+.chart-tooltip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--border-strong);border-radius:10px;padding:9px 12px;font-size:12px;box-shadow:var(--shadow);white-space:nowrap;transform:translate(-50%,-115%);z-index:5;font-family:var(--font-mono);}
+.chart-tooltip .tt-date{font-family:var(--font-sans);font-weight:600;color:var(--ink);margin-bottom:4px;font-size:12px;}
+.chart-tooltip .tt-row{display:flex;justify-content:space-between;gap:14px;}
+.chart-tooltip .tt-row .k{color:var(--ink-2);}
+.scale-note{font-size:11.5px;color:var(--muted);margin-top:8px;}
+
+.two-col{display:grid;grid-template-columns:1.1fr 1.4fr;gap:20px;align-items:start;}
+
+.holding-mode{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;margin-bottom:12px;}
+.holding-mode.offensive{background:var(--accent-soft);color:var(--accent);}
+.holding-mode.defensive{background:rgba(160,100,0,0.14);color:var(--warning);}
+.holding-mode .dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
+.holding-list{display:flex;flex-direction:column;gap:10px;}
+.sector-block{border:1px solid var(--border);border-radius:10px;padding:10px 12px;background:var(--surface-2);}
+.sector-block .sector-name{font-size:12px;font-weight:700;color:var(--accent);margin-bottom:8px;text-transform:uppercase;letter-spacing:.03em;}
+.holding-card{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0;}
+.holding-card + .holding-card{border-top:1px dashed var(--border);}
+.holding-card .name{font-size:13.5px;font-weight:600;}
+.holding-card .code{font-family:var(--font-mono);font-size:11.5px;color:var(--muted);}
+.holding-card .weight{font-family:var(--font-mono);font-size:13.5px;font-weight:600;color:var(--accent);}
+.holding-asof{font-size:11.5px;color:var(--muted);margin-top:12px;}
+
+.table-scroll{overflow-x:auto;border:1px solid var(--border);border-radius:10px;}
+table{border-collapse:collapse;width:100%;font-size:12.5px;min-width:560px;}
+thead th{position:sticky;top:0;background:var(--surface-2);text-align:left;padding:9px 12px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border-strong);white-space:nowrap;}
+tbody td{padding:8px 12px;border-bottom:1px solid var(--border);vertical-align:top;}
+tbody tr:last-child td{border-bottom:none;}
+tbody tr:hover{background:var(--surface-2);}
+td.mono, th.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;}
+.ret-up{color:var(--up);font-family:var(--font-mono);font-variant-numeric:tabular-nums;}
+.ret-down{color:var(--down);font-family:var(--font-mono);font-variant-numeric:tabular-nums;}
+.tag{display:inline-block;font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:6px;background:var(--surface-2);color:var(--ink-2);white-space:nowrap;}
+.tag.safe{background:rgba(160,100,0,0.14);color:var(--warning);}
+.tag.eligible{background:var(--accent-soft);color:var(--accent);}
+.log-table-wrap{max-height:420px;overflow-y:auto;}
+.rank-num{font-family:var(--font-mono);color:var(--muted);width:20px;display:inline-block;}
+
+.notes{border:1px dashed var(--border-strong);border-radius:14px;padding:18px 20px;background:transparent;}
+.notes h3{font-size:13px;color:var(--ink-2);margin-bottom:10px;}
+.notes ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:7px;}
+.notes li{font-size:12.5px;color:var(--ink-2);line-height:1.55;}
+
+.topbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;}
+.tabs{display:inline-flex;gap:4px;padding:4px;border-radius:12px;background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow);}
+.tabs button{border:none;background:transparent;color:var(--ink-2);font-size:13.5px;font-weight:600;padding:8px 16px;border-radius:9px;cursor:pointer;}
+.tabs button:hover{background:var(--surface-2);}
+.tabs button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink);}
+.tab-pane{display:flex;flex-direction:column;gap:20px;}
+.tab-pane[hidden]{display:none;}
+.two-col.even{grid-template-columns:1fr 1fr;}
+@media (max-width:760px){ .two-col.even{grid-template-columns:1fr;} }
+
+.stat-tile .value.up{color:var(--up);}
+.stat-tile .value.down{color:var(--down);}
+.stat-tile .value.text{font-family:var(--font-sans);font-size:clamp(16px,2.2vw,20px);}
+.panel-sub{font-size:12px;color:var(--muted);margin:-8px 0 14px;}
+
+.dbars{display:flex;flex-direction:column;gap:2px;}
+.dbar-row{display:grid;grid-template-columns:minmax(92px,128px) 1fr 64px;align-items:center;gap:10px;padding:5px 4px;border-radius:6px;cursor:default;}
+.dbar-row:hover{background:var(--surface-2);}
+.dbar-name{font-size:13px;font-weight:600;line-height:1.2;}
+.dbar-name .code{display:block;font-family:var(--font-mono);font-size:10.5px;font-weight:500;color:var(--muted);}
+.dbar-track{position:relative;height:16px;}
+.dbar-track::before{content:"";position:absolute;left:50%;top:-4px;bottom:-4px;width:1px;background:var(--border-strong);}
+.dbar-fill{position:absolute;top:2px;height:12px;}
+.dbar-fill.up{left:50%;background:var(--up);border-radius:0 4px 4px 0;}
+.dbar-fill.down{right:50%;background:var(--down);border-radius:4px 0 0 4px;}
+.dbar-val{font-family:var(--font-mono);font-size:12.5px;font-weight:600;text-align:right;font-variant-numeric:tabular-nums;}
+.dbar-val .sub{display:block;font-size:10.5px;font-weight:500;color:var(--muted);}
+
+.spark-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;}
+.spark-card{border:1px solid var(--border);border-radius:12px;padding:12px 14px 10px;background:var(--surface-2);display:flex;flex-direction:column;gap:2px;min-width:0;}
+.spark-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;}
+.spark-head .nm{font-size:13px;font-weight:600;}
+.spark-head .cd{font-family:var(--font-mono);font-size:10.5px;color:var(--muted);}
+.spark-now{font-family:var(--font-mono);font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;}
+.spark-delta{font-family:var(--font-mono);font-size:12px;font-weight:600;}
+.spark-delta.up{color:var(--up);} .spark-delta.down{color:var(--down);} .spark-delta.flat{color:var(--muted);}
+.spark-card svg{width:100%;height:64px;display:block;margin-top:6px;overflow:visible;touch-action:pan-y;}
+.spark-range{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:10px;color:var(--muted);}
+
+.heat-table{min-width:720px;}
+.heat-table th,.heat-table td{text-align:center;padding:6px 4px;}
+.heat-table thead th{text-transform:none;letter-spacing:0;}
+.heat-table td.date{font-family:var(--font-mono);font-size:11.5px;color:var(--ink-2);text-align:left;padding-left:12px;white-space:nowrap;}
+.heat-table td.cell{font-family:var(--font-mono);font-size:11.5px;font-variant-numeric:tabular-nums;color:var(--ink);border:2px solid var(--surface);border-radius:6px;}
+.heat-table tbody tr:hover{background:transparent;}
+.heat-table tr.sel td.date{color:var(--ink);font-weight:700;}
+.heat-scale{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--muted);margin-top:10px;flex-wrap:wrap;}
+.heat-scale .bar{width:160px;height:8px;border-radius:4px;background:linear-gradient(90deg,var(--down),var(--surface-2),var(--up));border:1px solid var(--border);}
+
+.dbar-row,.spark-card{cursor:pointer;}
+.dbar-row:focus-visible,.spark-card:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+.spark-card:hover{border-color:var(--border-strong);}
+
+.sector-dialog{border:1px solid var(--border-strong);border-radius:16px;padding:0;background:var(--surface);color:var(--ink);box-shadow:var(--shadow);width:min(540px,calc(100vw - 32px));max-height:calc(100vh - 48px);font-family:var(--font-sans);}
+.sector-dialog::backdrop{background:rgba(10,13,19,0.45);}
+.sd-inner{padding:18px 20px 16px;display:flex;flex-direction:column;gap:12px;}
+.sd-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;}
+.sd-context{font-size:11.5px;font-weight:600;color:var(--accent);letter-spacing:.02em;}
+.sd-head h3{font-size:18px;font-weight:700;margin-top:4px;}
+.sd-head h3 .code{font-family:var(--font-mono);font-size:13px;font-weight:500;color:var(--muted);margin-left:6px;}
+.sd-close{border:1px solid var(--border-strong);background:var(--surface-2);color:var(--ink-2);width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:14px;flex:none;}
+.sd-close:hover{color:var(--ink);}
+.sd-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.sd-summary .cell{background:var(--surface-2);border-radius:10px;padding:8px 10px;}
+.sd-summary .k{font-size:11px;color:var(--muted);font-weight:600;}
+.sd-summary .v{font-family:var(--font-mono);font-size:14px;font-weight:600;margin-top:2px;font-variant-numeric:tabular-nums;}
+.sd-summary .s{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;}
+.sd-summary .s.ret-up{color:var(--up);font-family:var(--font-sans);}
+.sd-summary .s.ret-down{color:var(--down);font-family:var(--font-sans);}
+.sd-table .sub{font-family:var(--font-sans);}
+.sd-table{min-width:0;}
+.sd-table td{vertical-align:middle;}
+.sd-table .sym{font-family:var(--font-mono);font-weight:600;font-size:13px;}
+.sd-table .nm{display:block;font-size:11px;color:var(--muted);max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sd-wbar{height:4px;border-radius:2px;background:var(--accent);margin-top:4px;opacity:.75;}
+.sd-table .sub{display:block;font-size:10.5px;color:var(--muted);}
+.sd-note{font-size:11.5px;color:var(--muted);line-height:1.5;margin:0;}
+@media (max-width:480px){ .sd-summary{grid-template-columns:1fr 1fr;} .sd-table .nm{max-width:110px;} }
+
+.float-tip{position:fixed;pointer-events:none;background:var(--surface);border:1px solid var(--border-strong);border-radius:10px;padding:8px 11px;font-size:12px;box-shadow:var(--shadow);z-index:20;font-family:var(--font-mono);white-space:nowrap;}
+.float-tip .tt-date{font-family:var(--font-sans);font-weight:600;margin-bottom:3px;}
+.float-tip .tt-row{display:flex;justify-content:space-between;gap:14px;}
+.float-tip .tt-row .k{color:var(--ink-2);}
+
+@media (max-width:760px){
+  .two-col{grid-template-columns:1fr;}
+  .stats-row{grid-template-columns:repeat(2,1fr);}
+}
+@media (max-width:480px){
+  .stats-row{grid-template-columns:1fr 1fr;}
+  .stat-tile .value{font-size:17px;}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none !important;animation:none !important;}
+}
+
+:root{ --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#008300; --s7:#6250d6; --s8:#e34948; }
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767; }
+}
+:root[data-theme="dark"]{ --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767; }
+
+.topbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;}
+.tabs{display:inline-flex;gap:4px;padding:4px;border-radius:12px;background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow);flex-wrap:wrap;}
+.tabs button,.tabs a{border:none;background:transparent;color:var(--ink-2);font-size:13.5px;font-weight:600;padding:8px 16px;border-radius:9px;cursor:pointer;text-decoration:none;font-family:inherit;}
+.tabs button:hover,.tabs a:hover{background:var(--surface-2);}
+.tabs button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink);}
+.tab-pane{display:flex;flex-direction:column;gap:20px;}
+.tab-pane[hidden]{display:none;}
+.updated{font-size:12px;color:var(--muted);}
+.load-error{color:var(--critical);}
+
+.ticker-entry{display:flex;gap:8px;flex-wrap:wrap;}
+.ticker-entry input{flex:1 1 220px;min-width:0;background:var(--surface-2);color:var(--ink);border:1px solid var(--border-strong);border-radius:10px;padding:9px 12px;font-size:14px;font-family:var(--font-mono);}
+.btn{border:1px solid var(--border-strong);background:var(--surface-2);color:var(--ink);border-radius:10px;padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;}
+.btn:hover{border-color:var(--accent);}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);}
+.btn.small{padding:5px 10px;font-size:12px;border-radius:8px;}
+.presets{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+.presets .lbl{font-size:12px;color:var(--muted);margin-right:2px;}
+.entry-msg{font-size:12px;color:var(--warning);min-height:16px;}
+.chips{display:flex;gap:8px;flex-wrap:wrap;}
+.chip{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--border-strong);border-radius:999px;padding:5px 6px 5px 10px;background:var(--surface);font-size:13px;}
+.chip .sw{width:10px;height:10px;border-radius:50%;flex:none;}
+.chip .tk{font-family:var(--font-mono);font-weight:600;}
+.chip .nm{color:var(--muted);font-size:11.5px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.chip input{width:58px;background:var(--surface-2);color:var(--ink);border:1px solid var(--border-strong);border-radius:6px;padding:3px 6px;font-family:var(--font-mono);font-size:12.5px;text-align:right;}
+.chip .x{border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:14px;width:24px;height:24px;border-radius:50%;}
+.chip .x:hover{background:var(--surface-2);color:var(--ink);}
+.chips-empty{font-size:13px;color:var(--muted);}
+.weight-sum{font-size:12px;color:var(--ink-2);}
+.range-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.range-row select{min-width:120px;}
+.cmp-notes{font-size:12px;color:var(--warning);display:flex;flex-direction:column;gap:4px;}
+.cmp-notes:empty{display:none;}
+#pane-compare .controls > .control-group{flex:none;}
+.control-group[hidden]{display:none;}
+
+#cmpChart,#ddChart{width:100%;height:auto;display:block;overflow:visible;touch-action:pan-y;}
+.chart-sub{font-size:12px;color:var(--muted);margin:-6px 0 10px;}
+.legend-swatch.dash{background:repeating-linear-gradient(90deg,var(--ink-2) 0 4px,transparent 4px 7px)!important;}
+.stat-table td.num,.stat-table th.num{text-align:right;font-family:var(--font-mono);font-variant-numeric:tabular-nums;white-space:nowrap;}
+.stat-table td.name{white-space:nowrap;}
+.stat-table .sw{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px;}
+.stat-table tr.bench td{color:var(--ink-2);}
+.stat-table tr.port td{font-weight:600;}
+.yr-table td.num,.yr-table th.num{text-align:right;font-family:var(--font-mono);font-variant-numeric:tabular-nums;}
+.corr-wrap{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:20px;align-items:start;}
+.corr-table{min-width:0;width:auto;}
+.corr-table th,.corr-table td{text-align:center;padding:7px 6px;white-space:nowrap;}
+.corr-table thead th{text-transform:none;letter-spacing:0;font-family:var(--font-mono);}
+.corr-table td.cell{font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-size:12.5px;border:2px solid var(--surface);border-radius:6px;min-width:56px;cursor:default;}
+.corr-table td.rowh{text-align:left;font-family:var(--font-mono);font-weight:600;}
+.corr-table td.avg{font-family:var(--font-mono);color:var(--ink-2);border-left:1px solid var(--border-strong);}
+.corr-table tbody tr:hover{background:transparent;}
+.corr-bar{background:linear-gradient(90deg,var(--down),var(--surface-2),var(--up))!important;}
+.corr-side{display:flex;flex-direction:column;gap:14px;font-size:13px;}
+.corr-side h3{font-size:12px;color:var(--muted);font-weight:600;margin:0 0 6px;}
+.corr-side .pair{display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-bottom:1px dashed var(--border);}
+.corr-side .pair .v{font-family:var(--font-mono);font-weight:600;}
+.corr-side .box{background:var(--surface-2);border-radius:10px;padding:10px 12px;line-height:1.55;color:var(--ink-2);}
+@media (max-width:760px){ .corr-wrap{grid-template-columns:1fr;} }
+.corr-main{display:flex;flex-direction:column;gap:16px;min-width:0;}
+.memo{border:1px solid var(--border);border-radius:12px;padding:14px;background:var(--surface-2);display:flex;flex-direction:column;gap:10px;}
+.memo-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;}
+.memo-head h3{font-size:14px;margin:0;}
+.memo-tools{display:flex;gap:6px;}
+.memo textarea{width:100%;resize:vertical;min-height:70px;background:var(--surface);color:var(--ink);border:1px solid var(--border-strong);border-radius:10px;padding:10px 12px;font-family:var(--font-sans);font-size:13.5px;line-height:1.5;}
+.memo-row{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}
+.memo-check{font-size:12.5px;color:var(--ink-2);display:flex;align-items:center;gap:6px;cursor:pointer;}
+.memo-list{display:flex;flex-direction:column;gap:8px;}
+.memo-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;}
+.memo-item .meta{display:flex;justify-content:space-between;gap:8px;font-size:11.5px;color:var(--muted);flex-wrap:wrap;}
+.memo-item .txt{font-size:13.5px;line-height:1.55;white-space:pre-wrap;word-break:break-word;}
+.memo-item .set{font-family:var(--font-mono);font-size:11.5px;color:var(--ink-2);}
+.memo-item .acts{display:flex;gap:6px;justify-content:flex-end;}
+.memo-item textarea{min-height:60px;}
+.memo-empty{font-size:12.5px;color:var(--muted);}
+
+.haa-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start;}
+.haa-h3{font-size:12px;color:var(--muted);font-weight:600;margin:0 0 8px;}
+.haa-hold{display:flex;flex-direction:column;gap:8px;}
+.haa-hold-row{display:grid;grid-template-columns:minmax(120px,1fr) 1.2fr 44px;align-items:center;gap:10px;font-size:13px;}
+.haa-hold-row .tk{font-family:var(--font-mono);font-weight:700;}
+.haa-hold-row .w{font-family:var(--font-mono);font-weight:700;text-align:right;}
+.haa-hold-bar{height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden;}
+.haa-hold-bar span{display:block;height:100%;background:var(--s1);border-radius:0 4px 4px 0;}
+.nm{color:var(--muted);font-size:11.5px;}
+.haa-mom-table{min-width:520px;}
+.haa-mom-table td.num,.haa-mom-table th.num{text-align:right;font-family:var(--font-mono);font-variant-numeric:tabular-nums;white-space:nowrap;}
+#pane-haa .two-col > .panel{min-width:0;}
+.haa-mom-table td:nth-child(-n+2){white-space:nowrap;}
+@media (max-width:760px){ .haa-grid{grid-template-columns:1fr;} }
+.memo-note{font-size:11.5px;color:var(--muted);margin:0;line-height:1.5;}
+
+
+/* 한국 페이지: 호박색 강조색 + 기존 한국 백테스터 전용 규칙 */
+:root{ --accent:#a8641f; --accent-ink:#ffffff; --accent-soft:#f2e2cd; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --accent:#d99a4c; --accent-ink:#191207; --accent-soft:#3a2c17; } }
+:root[data-theme="dark"]{ --accent:#d99a4c; --accent-ink:#191207; --accent-soft:#3a2c17; }
+.chart-header .scale-note{font-size:11.5px;color:var(--muted);}
+.dup-row{opacity:.62;font-style:italic;}
+.dup-note{font-size:11px;color:var(--muted);}
+.notes .credit{margin-top:14px;font-size:11.5px;color:var(--muted);}
+/* 국내 ETF 이름이 길어서 신호 패널은 한 줄에 표 하나씩 */
+#pane-haa .haa-grid{grid-template-columns:1fr;}
+.haa-hold-row .tk{font-family:var(--font-sans);}
+.us-compare{background:var(--surface-2);border-radius:10px;padding:10px 12px;font-size:12.5px;color:var(--ink-2);margin:-4px 0 14px;line-height:1.6;}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="topbar">
+    <div class="tabs" role="tablist" aria-label="화면 선택">
+      <button type="button" role="tab" data-tab="rotation" aria-selected="true">ETF 모멘텀 로테이션</button>
+      <button type="button" role="tab" data-tab="haa" aria-selected="false">HAA 자산배분 (한국 계좌)</button>
+    </div>
+    <a class="crosslink" href="../backtest/">🇺🇸 미국 주식 백테스터 (섹터 로테이션·종목 비교·HAA·섹터 데일리) →</a>
+  </div>
+  <div class="updated" id="updatedAt">데이터 불러오는 중…</div>
+  <div class="tab-pane" id="pane-rotation">
+  <header class="hero">
+    <div class="eyebrow">국내 상장 ETF · 월간 리밸런싱 시뮬레이터</div>
+    <h1>ETF 모멘텀 로테이션 백테스터</h1>
+    <p>국내 상장 ETF 24종목(중복 그룹 포함)의 실제 월봉 데이터로, 매월 말 모멘텀 점수를 계산해 공격자산 상위 N종목으로 갈아타고, 전 종목이 약세일 땐 채권·현금성·금 ETF로 피신하는 듀얼 모멘텀 전략을 직접 백테스트합니다.</p>
+  </header>
+
+  <section class="panel controls" aria-label="전략 설정">
+    <div class="control-row">
+      <div class="control-group">
+        <label>모멘텀 스코어 산출 방식</label>
+        <div class="segmented" data-control="weight" role="group">
+          <button data-value="vaa" class="active" type="button">VAA 고전식 (12·4·2·1)</button>
+          <button data-value="equal4" type="button">1·3·6·12개월 균등 (HAA 방식)</button>
+          <button data-value="m12" type="button">단순 12개월</button>
+        </div>
+        <span class="hint">1개월 수익률만 보는 방식은 반전(단기 되돌림) 구간에 취약해 제외했습니다.</span>
+      </div>
+      <div class="control-group">
+        <label>공격자산 유니버스</label>
+        <div class="segmented" data-control="universe" role="group">
+          <button data-value="full" class="active" type="button">전체 (섹터 포함, 16종목)</button>
+          <button data-value="broad" type="button">브로드 자산군만 (5종목)</button>
+        </div>
+        <span class="hint">브로드 = 코스피200·코스닥150·미국S&P500·나스닥100·유럽. 좁은 섹터 ETF는 변동성이 커서 휩쏘가 심해집니다.</span>
+      </div>
+      <div class="control-group">
+        <label>공격자산 편입 종목 수</label>
+        <div class="segmented" data-control="topn" role="group">
+          <button data-value="1" type="button">Top 1</button>
+          <button data-value="2" class="active" type="button">Top 2</button>
+          <button data-value="3" type="button">Top 3</button>
+        </div>
+      </div>
+      <div class="control-group">
+        <label>방어자산 편입 종목 수</label>
+        <div class="segmented" data-control="safen" role="group">
+          <button data-value="1" class="active" type="button">Top 1</button>
+          <button data-value="2" type="button">Top 2</button>
+        </div>
+        <span class="hint">공격자산이 전부 마이너스 모멘텀일 때만 발동</span>
+      </div>
+      <div class="control-group">
+        <label for="startMonth">백테스트 시작월</label>
+        <select id="startMonth"></select>
+        <span class="hint">종료월은 데이터 최신월로 고정</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="stats-row" aria-label="핵심 성과 지표">
+    <div class="stat-tile"><span class="label">최종 잔고</span><span class="value" id="statFinal">–</span><span class="sub">시작 ₩10,000,000</span></div>
+    <div class="stat-tile"><span class="label">연복리수익률(CAGR)</span><span class="value" id="statCagr">–</span><span class="sub" id="statMonths">–</span></div>
+    <div class="stat-tile"><span class="label">최대낙폭(MDD)</span><span class="value" id="statMdd">–</span><span class="sub">월말 기준 종가 계산</span></div>
+    <div class="stat-tile"><span class="label">KODEX 200 단순보유 대비</span><span class="value" id="statVsKodex">–</span><span class="sub" id="statVsKodexSub">CAGR 차이</span></div>
+  </section>
+
+  <section class="panel chart-card">
+    <div class="chart-header">
+      <h2>누적 성과 (₩10,000,000 시작, 로그 스케일)</h2>
+      <div class="legend" id="chartLegend"></div>
+    </div>
+    <div class="chart-wrap">
+      <svg id="equityChart" viewBox="0 0 960 340" preserveAspectRatio="xMidYMid meet" role="img" aria-label="전략과 벤치마크의 누적 성과 비교 라인 차트"></svg>
+      <div class="chart-tooltip" id="chartTooltip" hidden></div>
+    </div>
+    <div class="scale-note">※ y축은 로그 스케일입니다 — 배수(2배, 4배, 8배…) 간격이 동일한 높이로 표시됩니다.</div>
+  </section>
+
+  <section class="two-col">
+    <div class="panel">
+      <h2>최근 리밸런싱 구성</h2>
+      <div id="currentHoldings"></div>
+    </div>
+    <div class="panel">
+      <h2>ETF 유니버스 (<span id="universeCount"></span>종목 · 백테스트 대상)</h2>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>코드</th><th>종목명</th><th>분류</th><th class="mono">데이터 시작</th></tr></thead>
+          <tbody id="universeBody"></tbody>
+        </table>
+      </div>
+      <p class="dup-note" style="margin-top:10px;">기울임 처리된 행은 대표 종목과 사실상 동일한 상품(동일 지수·자산 추종)이라 백테스트에서는 제외하고 그룹으로만 표시했습니다.</p>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>월별 리밸런싱 로그</h2>
+    <div class="table-scroll log-table-wrap">
+      <table>
+        <thead><tr><th class="mono">월</th><th>모드</th><th>보유 종목 (비중)</th><th class="mono">월간 수익률</th><th class="mono">잔고</th></tr></thead>
+        <tbody id="logBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer class="notes">
+    <h3>백테스트 전제 및 한계 — 반드시 읽어주세요</h3>
+    <ul>
+      <li><strong>가격 기준(Price Return)이며 총수익(Total Return)이 아닙니다.</strong> 채권·현금성 ETF(단기채권, CD금리, 국고채3년, 금)는 분배금이 반영되지 않아 실제보다 수익률이 낮게 잡힙니다 — 방어자산 구간의 실제 성과는 여기 표시된 것보다 좋을 가능성이 높습니다.</li>
+      <li><strong>매매수수료·슬리피지·세금이 전혀 반영되지 않았습니다.</strong> 월 단위로 종목을 교체하면 실제로는 이 백테스트보다 수익률이 낮아집니다.</li>
+      <li><strong>생존편향 위험이 있습니다.</strong> 유니버스는 "지금 시점에 존재하는" ETF 24종목으로 구성했습니다 — 과거 그 시점에 상장 폐지되었거나 관심 밖이었던 ETF는 반영되지 않았습니다.</li>
+      <li>각 ETF는 실제 상장일부터만 백테스트에 포함되며, 모멘텀 계산에 필요한 과거 데이터(최대 12개월)가 없으면 그 달은 매수 후보에서 제외됩니다.</li>
+      <li>데이터 출처: 네이버페이 증권 KRX 월봉 종가. 마지막 데이터: <span class="lastMonthNote"></span> 월말 — 매월 1일 아침 지난달 월말 가격이 자동으로 추가됩니다.</li>
+      <li>이 도구는 아이디어 검증용 참고 자료이며, 투자 조언이 아닙니다.</li>
+    </ul>
+  </footer>
+  </div>
+  <div class="tab-pane" id="pane-haa" hidden>
+    <header class="hero">
+      <div class="eyebrow">Hybrid Asset Allocation · 한국 주식계좌용 · 국내 상장 ETF · 월간 리밸런싱</div>
+      <h1>HAA 자산배분 (한국 계좌)</h1>
+      <p>미국 HAA와 같은 규칙을 <strong>국내 상장 ETF</strong>로 옮긴 버전입니다. 미국 물가연동국채 ETF를 "카나리아"로 써서 시장 위험을 먼저 감지하고, 괜찮으면 공격자산 중 모멘텀이 강한 4개에, 위험하면 달러 현금성 ETF나 미국채 ETF에 투자합니다. 매월 1일 아침 지난달 월말 가격으로 자동 갱신되며, 아래 "이번 달 신호"가 이번 달에 한국 계좌에서 보유할 ETF입니다.</p>
+    </header>
+
+    <section class="panel controls" aria-label="HAA 설정">
+      <div class="control-row">
+        <div class="control-group">
+          <label>전략 변형</label>
+          <div class="segmented" data-haa="variant" role="group">
+            <button data-value="balanced" class="active" type="button">HAA-Balanced</button>
+            <button data-value="simple" type="button">HAA-Simple (S&amp;P500만)</button>
+          </div>
+          <span class="hint" id="haaVariantHint"></span>
+        </div>
+        <div class="control-group" id="haaTopGroup">
+          <label>공격자산 편입 수</label>
+          <div class="segmented" data-haa="topN" role="group">
+            <button data-value="1" type="button">1</button>
+            <button data-value="2" type="button">2</button>
+            <button data-value="3" type="button">3</button>
+            <button data-value="4" class="active" type="button">4 (기본)</button>
+          </div>
+        </div>
+        <div class="control-group">
+          <label for="haaStart">백테스트 시작월</label>
+          <select id="haaStart"></select>
+          <span class="hint">모든 국내 ETF에 12개월 데이터가 쌓인 달부터 가능합니다.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>미국 HAA ↔ 국내 상장 ETF 대응표</h2>
+      <p class="chart-sub">같은 지수를 따르는 국내 ETF 중 순자산이 가장 큰 것을 골랐습니다 (2026-11-15 네이버 ETF 목록 기준). 빈칸은 아직 국내에 상장된 ETF가 없는 자리이며, 생기면 추가합니다.</p>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>역할</th><th class="mono">미국</th><th>국내 ETF</th><th class="mono">코드</th><th>기초지수</th><th>환율</th><th class="mono">데이터 시작</th></tr></thead>
+          <tbody id="haaMapBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel haa-signal" aria-label="이번 달 신호">
+      <div class="chart-header">
+        <h2>이번 달 신호</h2>
+        <span class="holding-mode" id="haaModeBadge"></span>
+      </div>
+      <p class="chart-sub" id="haaSignalSub"></p>
+      <div class="memo-note us-compare" id="haaUsCompare" hidden></div>
+      <div class="haa-grid">
+        <div>
+          <h3 class="haa-h3">이번 달 보유 비중</h3>
+          <div id="haaHold" class="haa-hold"></div>
+          <h3 class="haa-h3" style="margin-top:16px;">카나리아 · 현금자산</h3>
+          <div class="table-scroll">
+            <table class="haa-mom-table">
+              <thead><tr><th>자산</th><th class="num">1개월</th><th class="num">3개월</th><th class="num">6개월</th><th class="num">12개월</th><th class="num">모멘텀</th><th>판정</th></tr></thead>
+              <tbody id="haaCanaryBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div>
+          <h3 class="haa-h3">공격자산 모멘텀 순위</h3>
+          <div class="table-scroll">
+            <table class="haa-mom-table">
+              <thead><tr><th>#</th><th>자산</th><th class="num">1개월</th><th class="num">3개월</th><th class="num">6개월</th><th class="num">12개월</th><th class="num">모멘텀</th><th>판정</th></tr></thead>
+              <tbody id="haaRankBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="stats-row" aria-label="HAA 성과" id="haaTiles"></section>
+
+    <section class="panel">
+      <div class="chart-header">
+        <h2>1,000만 원 투자 시 성장 (로그 스케일)</h2>
+        <div class="legend" id="haaLegend"></div>
+      </div>
+      <div class="chart-wrap">
+        <svg id="haaChart" viewBox="0 0 960 340" preserveAspectRatio="xMidYMid meet" role="img" aria-label="HAA 전략과 비교 대상의 누적 성장"></svg>
+      </div>
+      <h2 style="margin:22px 0 4px;font-size:15px;">낙폭 (고점 대비 하락률)</h2>
+      <p class="chart-sub">월말 기준. 회색 띠는 방어 모드(현금자산 100%)였던 달입니다.</p>
+      <div class="chart-wrap">
+        <svg id="haaDD" viewBox="0 0 960 170" preserveAspectRatio="xMidYMid meet" role="img" aria-label="HAA 낙폭"></svg>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>성과 지표</h2>
+      <div class="table-scroll">
+        <table class="stat-table">
+          <thead><tr><th>전략</th><th class="num">최종 금액</th><th class="num">연평균(CAGR)</th><th class="num">변동성(연)</th><th class="num">최대낙폭</th><th class="num">샤프 비율</th><th class="num">최악의 달</th><th class="num">상승한 달</th><th class="num">방어 모드 비율</th></tr></thead>
+          <tbody id="haaStatBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="two-col">
+      <div class="panel">
+        <h2>연도별 수익률</h2>
+        <div class="table-scroll">
+          <table class="yr-table">
+            <thead><tr><th>연도</th><th class="num">HAA</th><th class="num">S&amp;P500</th><th class="num">60/40</th></tr></thead>
+            <tbody id="haaYearBody"></tbody>
+          </table>
+        </div>
+        <p class="chart-sub" style="margin-top:8px;">* 표시는 1년 전체가 아닌 해입니다.</p>
+      </div>
+      <div class="panel">
+        <h2>월별 리밸런싱 로그</h2>
+        <div class="table-scroll log-table-wrap">
+          <table>
+            <thead><tr><th class="mono">월</th><th>모드</th><th>보유</th><th class="num">수익률</th></tr></thead>
+            <tbody id="haaLogBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <footer class="notes">
+      <h3>한국 계좌용 HAA 규칙과 전제</h3>
+      <ul>
+        <li><strong>규칙은 미국 HAA와 같습니다.</strong> 모멘텀 = 1·3·6·12개월 수익률 평균. 카나리아(미국 물가연동국채 ETF) 모멘텀 &gt; 0이면 공격 모드로 공격자산 상위 4개에 25%씩(모멘텀 0 이하인 자리는 현금자산), 0 이하면 방어 모드로 현금자산 100%. 현금자산 = 달러 SOFR 금리 ETF와 미국채10년 ETF 중 모멘텀이 높은 쪽.</li>
+        <li><strong>모든 계산은 국내 ETF의 원화 가격(네이버 월봉 종가)으로 합니다.</strong> 실제로 계좌에서 사고파는 가격이라 그대로 따라 하기 쉽지만, 환헤지 안 된 ETF에는 환율 변화가 섞여서 미국판과 신호가 달라질 수 있습니다. "이번 달 신호"의 "참고: 미국 원본 기준" 줄로 비교해 보세요.</li>
+        <li><strong>원자재(DBC) 자리는 국내 상장 ETF가 없어 비워 두었고</strong>, 남은 7개 공격자산 중 상위 4개를 고릅니다.</li>
+        <li><strong>백테스트 기간이 짧습니다.</strong> 물가연동국채 ETF가 2023년 10월 상장이라 12개월 모멘텀이 나오는 2024년 10월부터만 계산됩니다. 긴 기간의 성과는 미국판 HAA(2008년~)를 참고하세요.</li>
+        <li>가격 기준(분배금 미반영)·월말 기준이며 매매수수료·세금(국내 상장 해외 ETF는 매매차익에 배당소득세 15.4%)은 반영하지 않았습니다. 투자 조언이 아닌 참고 자료입니다.</li>
+      </ul>
+    </footer>
+  </div>
+
+</div>
+<div class="float-tip" id="floatTip" hidden></div>
+<script>
+const fmtPct = (n, digits=2) => (n>=0?"+":"") + n.toFixed(digits) + "%";
+function initRotation(RAW_DATA, ROT){
+const DUP_MAP = ROT.dupMap;
+const OFFENSIVE_CODES = ROT.offensive;
+const BROAD_OFFENSIVE_CODES = ROT.broadOffensive;
+const SAFE_CODES = ROT.safe;
+
+
+
+const WEIGHT_PRESETS = {
+  vaa:    {1:12, 3:4, 6:2, 12:1},
+  equal4: {1:1, 3:1, 6:1, 12:1},
+  m12:    {12:1},
+};
+
+const state = { weight: "vaa", topn: 2, safen: 1, startIdx: 12, universe: "full" };
+
+const priceMap = {};
+for (const code in RAW_DATA) {
+  const m = new Map();
+  RAW_DATA[code].prices.forEach(([ym, c]) => m.set(ym, c));
+  priceMap[code] = m;
+}
+const masterMonths = RAW_DATA["069500"].prices.map(p => p[0]).sort();
+
+function fmtMonth(ym){ return ym.slice(0,4) + "." + ym.slice(4,6); }
+function fmtWon(n){ return "₩" + Math.round(n).toLocaleString("ko-KR"); }
+function fmtPct(n, digits=2){ return (n>=0?"+":"") + n.toFixed(digits) + "%"; }
+
+function score(code, i, weights){
+  const pm = priceMap[code];
+  const nowYm = masterMonths[i];
+  if (!pm.has(nowYm)) return null;
+  const p0 = pm.get(nowYm);
+  let total = 0;
+  for (const period in weights){
+    const p = parseInt(period, 10);
+    if (i - p < 0) return null;
+    const pastYm = masterMonths[i - p];
+    if (!pm.has(pastYm)) return null;
+    const pPast = pm.get(pastYm);
+    if (!(pPast > 0)) return null;
+    total += weights[period] * (p0 / pPast - 1);
+  }
+  return total;
+}
+
+function runBacktest(){
+  const weights = WEIGHT_PRESETS[state.weight];
+  const requiredLookback = Math.max(...Object.keys(weights).map(Number));
+  const startIdx = Math.max(state.startIdx, requiredLookback);
+  const offensiveUniverse = state.universe === "broad" ? BROAD_OFFENSIVE_CODES : OFFENSIVE_CODES;
+
+  let nav = 10_000_000, kodexNav = 10_000_000, mixNav = 10_000_000;
+  const log = [];
+  const navSeries = [{ ym: masterMonths[startIdx], nav, kodexNav, mixNav }];
+
+  for (let i = startIdx; i < masterMonths.length - 1; i++){
+    const scoredOff = offensiveUniverse
+      .map(code => ({ code, s: score(code, i, weights) }))
+      .filter(x => x.s !== null)
+      .sort((a,b) => b.s - a.s);
+    const eligible = scoredOff.filter(x => x.s > 0);
+
+    let mode = "offensive", picks = [];
+    if (eligible.length > 0){
+      picks = eligible.slice(0, state.topn);
+    } else {
+      mode = "defensive";
+      const scoredSafe = SAFE_CODES
+        .map(code => ({ code, s: score(code, i, weights) }))
+        .filter(x => x.s !== null)
+        .sort((a,b) => b.s - a.s);
+      picks = scoredSafe.slice(0, state.safen);
+      if (picks.length === 0 && scoredOff.length > 0) picks = scoredOff.slice(0,1);
+    }
+
+    const nextYm = masterMonths[i+1];
+    let monthRet = 0;
+    const picksDisplay = [];
+    if (picks.length > 0){
+      const w = 1 / picks.length;
+      for (const p of picks){
+        const pm = priceMap[p.code];
+        const pNow = pm.get(masterMonths[i]);
+        const pNext = pm.get(nextYm);
+        if (pNext === undefined) continue;
+        const r = pNext / pNow - 1;
+        monthRet += w * r;
+        picksDisplay.push({ code: p.code, name: RAW_DATA[p.code].name, weight: w, ret: r*100 });
+      }
+    }
+    nav *= (1 + monthRet);
+
+    const pm200 = priceMap["069500"];
+    const r200 = pm200.get(nextYm) / pm200.get(masterMonths[i]) - 1;
+    kodexNav *= (1 + r200);
+
+    const pmBond = priceMap["114260"];
+    const rBond = pmBond.get(nextYm) / pmBond.get(masterMonths[i]) - 1;
+    mixNav *= (1 + 0.6*r200 + 0.4*rBond);
+
+    log.push({ month: nextYm, mode, picks: picksDisplay, ret: monthRet*100, nav, kodexNav, mixNav });
+    navSeries.push({ ym: nextYm, nav, kodexNav, mixNav });
+  }
+  return { log, navSeries };
+}
+
+function computeStats(navSeries, log){
+  const n = log.length;
+  const years = n / 12;
+  const finalNav = navSeries[navSeries.length-1].nav;
+  const finalKodex = navSeries[navSeries.length-1].kodexNav;
+  const cagr = (Math.pow(finalNav/10_000_000, 1/years) - 1) * 100;
+  const cagrKodex = (Math.pow(finalKodex/10_000_000, 1/years) - 1) * 100;
+
+  let peak = -Infinity, mdd = 0;
+  for (const p of navSeries){
+    if (p.nav > peak) peak = p.nav;
+    const dd = (p.nav - peak) / peak;
+    if (dd < mdd) mdd = dd;
+  }
+  return { finalNav, finalKodex, cagr, cagrKodex, mdd: mdd*100, months: n, years };
+}
+
+function buildStartMonthOptions(){
+  const sel = document.getElementById("startMonth");
+  sel.innerHTML = "";
+  for (let i = 12; i <= masterMonths.length - 13; i++){
+    const opt = document.createElement("option");
+    opt.value = i;
+    opt.textContent = fmtMonth(masterMonths[i]) + " 부터";
+    sel.appendChild(opt);
+  }
+  sel.value = 12;
+  sel.addEventListener("change", () => { state.startIdx = parseInt(sel.value, 10); render(); });
+}
+
+function wireSegmented(){
+  document.querySelectorAll("#pane-rotation .segmented").forEach(group => {
+    const key = group.dataset.control;
+    group.querySelectorAll("button").forEach(btn => {
+      btn.addEventListener("click", () => {
+        group.querySelectorAll("button").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        const v = btn.dataset.value;
+        state[key] = (key === "topn" || key === "safen") ? parseInt(v,10) : v;
+        render();
+      });
+    });
+  });
+}
+
+function renderStats(stats){
+  document.getElementById("statFinal").textContent = fmtWon(stats.finalNav);
+  document.getElementById("statCagr").textContent = fmtPct(stats.cagr, 2);
+  document.getElementById("statCagr").style.color = stats.cagr >= 0 ? "var(--up)" : "var(--down)";
+  document.getElementById("statMonths").textContent = stats.months + "개월 (" + stats.years.toFixed(1) + "년) 백테스트";
+  document.getElementById("statMdd").textContent = stats.mdd.toFixed(1) + "%";
+  const diff = stats.cagr - stats.cagrKodex;
+  const vsEl = document.getElementById("statVsKodex");
+  vsEl.textContent = (diff>=0?"+":"") + diff.toFixed(2) + "%p";
+  const subEl = document.getElementById("statVsKodexSub");
+  subEl.className = "sub " + (diff >= 0 ? "up" : "down");
+  subEl.textContent = "KODEX200 CAGR " + fmtPct(stats.cagrKodex,2);
+}
+
+function renderHoldings(log){
+  const box = document.getElementById("currentHoldings");
+  if (log.length === 0){ box.innerHTML = "<p style='color:var(--muted);font-size:13px;'>표시할 구간이 없습니다.</p>"; return; }
+  const last = log[log.length-1];
+  const modeLabel = last.mode === "offensive" ? "공격 모드" : "방어 모드 (전 종목 모멘텀 약세)";
+  let html = `<div class="holding-mode ${last.mode}"><span class="dot"></span>${modeLabel}</div>`;
+  html += `<div class="holding-list">`;
+  for (const p of last.picks){
+    html += `<div class="holding-card">
+      <div><div class="name">${p.name}</div><div class="code">${p.code}</div></div>
+      <div class="weight">${(p.weight*100).toFixed(0)}%</div>
+    </div>`;
+  }
+  html += `</div>`;
+  html += `<div class="holding-asof">기준월: ${fmtMonth(last.month)} · 이 달 실현 수익률 ${fmtPct(last.ret)}</div>`;
+  box.innerHTML = html;
+}
+
+function renderUniverse(){
+  const body = document.getElementById("universeBody");
+  body.innerHTML = "";
+  const allCodes = Object.keys(RAW_DATA).sort((a,b) => {
+    const da = RAW_DATA[a].prices[0][0], db = RAW_DATA[b].prices[0][0];
+    return da.localeCompare(db);
+  });
+  let count = 0;
+  for (const code of allCodes){
+    const info = RAW_DATA[code];
+    const isDup = !!DUP_MAP[code];
+    if (!isDup) count++;
+    const tr = document.createElement("tr");
+    if (isDup) tr.className = "dup-row";
+    const isSafe = info.tag === "safe" || (isDup && RAW_DATA[DUP_MAP[code]].tag === "safe");
+    const isBroad = BROAD_OFFENSIVE_CODES.includes(code);
+    const startYm = info.prices[0][0];
+    tr.innerHTML = `
+      <td class="mono">${code}</td>
+      <td>${info.name}${isDup ? ` <span class="dup-note">(≈ ${DUP_MAP[code]} 그룹)</span>` : ""}</td>
+      <td><span class="tag ${isSafe ? "safe" : ""}">${info.category}</span>${isBroad ? ` <span class="tag" style="background:var(--accent-soft);color:var(--accent);">브로드</span>` : ""}</td>
+      <td class="mono">${fmtMonth(startYm)}</td>`;
+    body.appendChild(tr);
+  }
+  document.getElementById("universeCount").textContent = count;
+}
+
+function renderLog(log){
+  const body = document.getElementById("logBody");
+  body.innerHTML = "";
+  for (let idx = log.length - 1; idx >= 0; idx--){
+    const row = log[idx];
+    const tr = document.createElement("tr");
+    const picksHtml = row.picks.map(p => `${p.name} <span class="mono" style="color:var(--muted)">(${(p.weight*100).toFixed(0)}%, ${fmtPct(p.ret,1)})</span>`).join("<br>");
+    const modeTag = row.mode === "offensive"
+      ? `<span class="tag">공격</span>`
+      : `<span class="tag safe">방어</span>`;
+    tr.innerHTML = `
+      <td class="mono">${fmtMonth(row.month)}</td>
+      <td>${modeTag}</td>
+      <td>${picksHtml || "<span style=\'color:var(--muted)\'>보유 없음</span>"}</td>
+      <td class="${row.ret>=0?"ret-up":"ret-down"}">${fmtPct(row.ret)}</td>
+      <td class="mono">${fmtWon(row.nav)}</td>`;
+    body.appendChild(tr);
+  }
+}
+
+const CHART_W = 960, CHART_H = 340;
+const CHART_PAD = { top: 16, right: 16, bottom: 28, left: 56 };
+
+function renderChart(navSeries){
+  const svg = document.getElementById("equityChart");
+  svg.innerHTML = "";
+  const plotW = CHART_W - CHART_PAD.left - CHART_PAD.right;
+  const plotH = CHART_H - CHART_PAD.top - CHART_PAD.bottom;
+
+  const series = [
+    { key: "nav",      label: "전략 (모멘텀 로테이션)", color: "var(--cat-1)" },
+    { key: "kodexNav", label: "KODEX 200 단순보유",     color: "var(--cat-2)" },
+    { key: "mixNav",   label: "60/40 (KODEX200+국고채3년)", color: "var(--cat-3)" },
+  ];
+
+  const allVals = navSeries.flatMap(p => [p.nav, p.kodexNav, p.mixNav]);
+  const logMin = Math.log10(Math.min(...allVals) * 0.92);
+  const logMax = Math.log10(Math.max(...allVals) * 1.08);
+
+  const xScale = i => CHART_PAD.left + (i / (navSeries.length - 1)) * plotW;
+  const yScale = v => CHART_PAD.top + (1 - (Math.log10(v) - logMin) / (logMax - logMin)) * plotH;
+
+  const ns = "http://www.w3.org/2000/svg";
+  const grid = document.createElementNS(ns, "g");
+  const ticks = [];
+  const startPow = Math.floor(logMin), endPow = Math.ceil(logMax);
+  for (let p = startPow; p <= endPow; p++){
+    for (const mult of [1, 2, 5]){
+      const v = mult * Math.pow(10, p);
+      const lv = Math.log10(v);
+      if (lv >= logMin && lv <= logMax) ticks.push(v);
+    }
+  }
+  ticks.forEach(v => {
+    const y = yScale(v);
+    const line = document.createElementNS(ns, "line");
+    line.setAttribute("x1", CHART_PAD.left); line.setAttribute("x2", CHART_W - CHART_PAD.right);
+    line.setAttribute("y1", y); line.setAttribute("y2", y);
+    line.setAttribute("stroke", "var(--border)"); line.setAttribute("stroke-width", "1");
+    grid.appendChild(line);
+    const label = document.createElementNS(ns, "text");
+    label.setAttribute("x", CHART_PAD.left - 8); label.setAttribute("y", y + 3.5);
+    label.setAttribute("text-anchor", "end"); label.setAttribute("font-size", "10.5");
+    label.setAttribute("fill", "var(--muted)"); label.setAttribute("font-family", "var(--font-mono)");
+    label.textContent = v >= 100_000_000 ? (v/100_000_000).toFixed(1)+"억" : (v/10_000).toFixed(0)+"만";
+    grid.appendChild(label);
+  });
+  svg.appendChild(grid);
+
+  const xTickCount = 6;
+  for (let t = 0; t <= xTickCount; t++){
+    const i = Math.round((t / xTickCount) * (navSeries.length - 1));
+    const x = xScale(i);
+    const label = document.createElementNS(ns, "text");
+    label.setAttribute("x", x); label.setAttribute("y", CHART_H - 8);
+    label.setAttribute("text-anchor", t===0 ? "start" : (t===xTickCount ? "end":"middle"));
+    label.setAttribute("font-size", "10.5"); label.setAttribute("fill", "var(--muted)");
+    label.setAttribute("font-family", "var(--font-mono)");
+    label.textContent = fmtMonth(navSeries[i].ym);
+    svg.appendChild(label);
+  }
+
+  series.forEach(s => {
+    const pts = navSeries.map((p,i) => `${xScale(i).toFixed(2)},${yScale(p[s.key]).toFixed(2)}`).join(" ");
+    const poly = document.createElementNS(ns, "polyline");
+    poly.setAttribute("points", pts);
+    poly.setAttribute("fill", "none");
+    poly.setAttribute("stroke", s.color);
+    poly.setAttribute("stroke-width", s.key === "nav" ? "2.4" : "2");
+    poly.setAttribute("stroke-linejoin", "round");
+    poly.setAttribute("stroke-linecap", "round");
+    svg.appendChild(poly);
+
+    const last = navSeries[navSeries.length-1];
+    const dot = document.createElementNS(ns, "circle");
+    dot.setAttribute("cx", xScale(navSeries.length-1)); dot.setAttribute("cy", yScale(last[s.key]));
+    dot.setAttribute("r", "3.5"); dot.setAttribute("fill", s.color);
+    dot.setAttribute("stroke", "var(--surface)"); dot.setAttribute("stroke-width","1.5");
+    svg.appendChild(dot);
+  });
+
+  const legend = document.getElementById("chartLegend");
+  legend.innerHTML = series.map(s => `<div class="legend-item"><span class="legend-swatch" style="background:${s.color}"></span>${s.label}</div>`).join("");
+
+  const hoverLine = document.createElementNS(ns, "line");
+  hoverLine.setAttribute("y1", CHART_PAD.top); hoverLine.setAttribute("y2", CHART_H - CHART_PAD.bottom);
+  hoverLine.setAttribute("stroke", "var(--muted)"); hoverLine.setAttribute("stroke-width","1");
+  hoverLine.setAttribute("stroke-dasharray","3,3"); hoverLine.setAttribute("visibility","hidden");
+  svg.appendChild(hoverLine);
+  const hoverDots = series.map(s => {
+    const c = document.createElementNS(ns, "circle");
+    c.setAttribute("r","4"); c.setAttribute("fill", s.color); c.setAttribute("stroke","var(--surface)");
+    c.setAttribute("stroke-width","1.5"); c.setAttribute("visibility","hidden");
+    svg.appendChild(c);
+    return c;
+  });
+
+  const tooltip = document.getElementById("chartTooltip");
+  const wrap = svg.parentElement;
+  function onMove(evt){
+    const rect = svg.getBoundingClientRect();
+    const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+    const relX = (clientX - rect.left) / rect.width * CHART_W;
+    let i = Math.round(((relX - CHART_PAD.left) / plotW) * (navSeries.length - 1));
+    i = Math.max(0, Math.min(navSeries.length - 1, i));
+    const x = xScale(i);
+    hoverLine.setAttribute("x1", x); hoverLine.setAttribute("x2", x); hoverLine.setAttribute("visibility","visible");
+    const p = navSeries[i];
+    series.forEach((s, idx) => {
+      hoverDots[idx].setAttribute("cx", x); hoverDots[idx].setAttribute("cy", yScale(p[s.key]));
+      hoverDots[idx].setAttribute("visibility","visible");
+    });
+    tooltip.innerHTML = `<div class="tt-date">${fmtMonth(p.ym)}</div>` + series.map(s =>
+      `<div class="tt-row"><span class="k">${s.label}</span><span>${fmtWon(p[s.key])}</span></div>`).join("");
+    const px = (x / CHART_W) * rect.width;
+    const py = (yScale(p.nav) / CHART_H) * rect.height;
+    tooltip.style.left = px + "px";
+    tooltip.style.top = py + "px";
+    tooltip.hidden = false;
+  }
+  function onLeave(){
+    hoverLine.setAttribute("visibility","hidden");
+    hoverDots.forEach(d => d.setAttribute("visibility","hidden"));
+    tooltip.hidden = true;
+  }
+  svg.addEventListener("mousemove", onMove);
+  svg.addEventListener("mouseleave", onLeave);
+  svg.addEventListener("touchmove", onMove, {passive:true});
+  svg.addEventListener("touchend", onLeave);
+}
+
+function render(){
+  const { log, navSeries } = runBacktest();
+  const stats = computeStats(navSeries, log);
+  renderStats(stats);
+  renderHoldings(log);
+  renderLog(log);
+  renderChart(navSeries);
+}
+
+buildStartMonthOptions();
+wireSegmented();
+renderUniverse();
+render();
+
+}
+
+// ================= 한국 계좌용 HAA =================
+// 규칙은 미국판 HAA 탭·backtest/haa_signal.py와 같고, 종목만 국내 상장 ETF (kr_backtest/haa_signal.py와 동일 계산)
+function initHaa(DATA){
+  const MONTHS = DATA.months, TK = DATA.tickers, CFG = DATA.haa;
+  const LOOKBACKS = [1, 3, 6, 12];
+  const SLOTS = [...CFG.offensive, CFG.canary, ...CFG.cash];
+  const OFFENSIVE = CFG.offensive.filter(x => x.code).map(x => x.code);
+  const MISSING = CFG.offensive.filter(x => !x.code);
+  const CANARY = CFG.canary.code, CASH = CFG.cash.filter(x => x.code).map(x => x.code);
+  const BENCH = CFG.benchmark.code, BOND = CFG.bond.code, RF = CASH[0];
+  const SLOT = {}; SLOTS.forEach(x => { if (x.code && !SLOT[x.code]) SLOT[x.code] = x; });
+  const NAMES = Object.fromEntries(Object.entries(SLOT).map(([c, x]) => [c, x.name]));
+  const US = c => SLOT[c] ? SLOT[c].us : c;
+  const hedgeTag = c => SLOT[c] && SLOT[c].hedged ? `<span class="tag" title="환헤지">H</span>` : "";
+  const hs = { variant: "balanced", topN: 4, start: null };
+  const fmtM = ym => ym.slice(0, 4) + "." + ym.slice(4, 6);
+  const pctS = (v, d = 1) => v == null || !isFinite(v) ? "–" : (v >= 0 ? "+" : "") + v.toFixed(d) + "%";
+  const cls = v => v == null ? "" : (v >= 0 ? "ret-up" : "ret-down");
+  const usd = n => "₩" + Math.round(n).toLocaleString("ko-KR");  // 한국판은 원화 1,000만 원 시작
+
+  function lbRet(t, i, lb){
+    const p = TK[t].p;
+    if (i - lb < 0 || p[i] == null || p[i - lb] == null || !(p[i - lb] > 0)) return null;
+    return p[i] / p[i - lb] - 1;
+  }
+  function momentum(t, i){
+    const r = LOOKBACKS.map(lb => lbRet(t, i, lb));
+    return r.some(x => x == null) ? null : r.reduce((a, b) => a + b, 0) / r.length;
+  }
+  function offensiveSet(){ return hs.variant === "simple" ? [BENCH] : OFFENSIVE; }
+  function topN(){ return hs.variant === "simple" ? 1 : hs.topN; }
+
+  // i번째 월말 기준 신호 → 다음 달 보유 비중
+  function haaSignal(i){
+    const off = offensiveSet(), n = topN();
+    const mom = {};
+    [...new Set([...off, ...CASH, CANARY])].forEach(t => mom[t] = momentum(t, i));
+    const cashC = CASH.filter(t => mom[t] != null);
+    const cash = cashC.sort((a, b) => mom[b] - mom[a])[0];
+    const canary = mom[CANARY];
+    const weights = {};
+    let mode, ranked = [];
+    if (canary != null && canary > 0){
+      mode = "offensive";
+      ranked = off.filter(t => mom[t] != null).sort((a, b) => mom[b] - mom[a]);
+      ranked.slice(0, n).forEach(t => { const tgt = mom[t] > 0 ? t : cash; weights[tgt] = (weights[tgt] || 0) + 1 / n; });
+    } else {
+      mode = "defensive";
+      ranked = off.filter(t => mom[t] != null).sort((a, b) => mom[b] - mom[a]);
+      weights[cash] = 1;
+    }
+    return { mode, weights, mom, canary, cash, ranked };
+  }
+  function firstValid(){
+    const need = [...offensiveSet(), ...CASH, CANARY];
+    for (let i = 0; i < MONTHS.length; i++) if (need.every(t => momentum(t, i) != null)) return i;
+    return MONTHS.length - 1;
+  }
+  const mret = (t, i) => TK[t].p[i + 1] / TK[t].p[i] - 1;
+
+  function run(){
+    const first = firstValid();
+    let s = hs.start ? MONTHS.indexOf(hs.start) : first;
+    if (s < first) s = first;
+    const e = MONTHS.length - 1;
+    const nav = [1e7], spy = [1e7], b6040 = [1e7], log = [];
+    for (let i = s; i < e; i++){
+      const sig = haaSignal(i);
+      const r = Object.entries(sig.weights).reduce((a, [t, w]) => a + w * mret(t, i), 0);
+      nav.push(nav[nav.length - 1] * (1 + r));
+      spy.push(spy[spy.length - 1] * (1 + mret(BENCH, i)));
+      b6040.push(b6040[b6040.length - 1] * (1 + 0.6 * mret(BENCH, i) + 0.4 * mret(BOND, i)));
+      log.push({ ym: MONTHS[i + 1], mode: sig.mode, weights: sig.weights, r: r * 100 });
+    }
+    return { s, e, first, nav, spy, b6040, log };
+  }
+
+  function stats(nav, s){
+    const rets = nav.slice(1).map((v, k) => v / nav[k] - 1), n = rets.length;
+    const mean = rets.reduce((a, b) => a + b, 0) / n;
+    const sd = Math.sqrt(rets.reduce((a, b) => a + (b - mean) ** 2, 0) / (n - 1));
+    const ex = rets.map((r, k) => r - mret(RF, s + k));
+    const em = ex.reduce((a, b) => a + b, 0) / n;
+    const esd = Math.sqrt(ex.reduce((a, b) => a + (b - em) ** 2, 0) / (n - 1));
+    let peak = -Infinity, mdd = 0;
+    const dd = nav.map(v => { peak = Math.max(peak, v); const d = (v / peak - 1) * 100; mdd = Math.min(mdd, d); return d; });
+    return { final: nav[n], cagr: (Math.pow(nav[n] / 1e7, 12 / n) - 1) * 100, vol: sd * Math.sqrt(12) * 100,
+             sharpe: esd > 0 ? em / esd * Math.sqrt(12) : null, mdd, dd, worst: Math.min(...rets) * 100,
+             up: rets.filter(r => r > 0).length / n * 100 };
+  }
+
+  // ---------- 이번 달 신호 ----------
+  // 같은 달 미국 원본(달러) 기준 HAA 신호를 같은 사이트의 미국 데이터로 계산해 비교
+  async function renderUsCompare(sig){
+    const box = document.getElementById("haaUsCompare");
+    try {
+      const us = await (await fetch("../backtest/data.json", { cache: "no-store" })).json();
+      const ui = us.months.indexOf(MONTHS[MONTHS.length - 1]);
+      if (ui < 0) { box.hidden = true; return; }
+      const p = (t, i) => us.tickers[t].p[i];
+      const mom = t => LOOKBACKS.map(lb => p(t, ui) / p(t, ui - lb) - 1).reduce((a, b) => a + b, 0) / LOOKBACKS.length;
+      const tip = mom("TIP");
+      const cash = mom("BIL") >= mom("IEF") ? "BIL" : "IEF";
+      let hold;
+      if (tip > 0){
+        const w = {};
+        ["SPY","IWM","VEA","VWO","VNQ","DBC","IEF","TLT"].map(t => [t, mom(t)]).sort((a, b) => b[1] - a[1]).slice(0, 4)
+          .forEach(([t, m]) => { const k = m > 0 ? t : cash; w[k] = (w[k] || 0) + 25; });
+        hold = Object.entries(w).map(([t, x]) => `${t} ${x}%`).join(", ");
+      } else hold = cash + " 100%";
+      const same = (tip > 0) === (sig.mode === "offensive");
+      box.hidden = false;
+      box.innerHTML = `<strong>참고: 미국 원본(달러) 기준 HAA</strong> — TIP 모멘텀 ${pctS(tip * 100, 2)} → ${tip > 0 ? "공격" : "방어"} (${hold}). ` +
+        (same ? "한국 계좌 신호와 모드가 같습니다." :
+         "<strong>한국 계좌 신호와 모드가 다릅니다.</strong> 국내 ETF는 원화 가격이라 환율 변화가 모멘텀에 섞입니다(환헤지 안 된 ETF는 원화 강세 때 수익률이 낮게 잡힘). 두 신호가 다를 때는 더 신중하게 판단하세요.") +
+        ` <a href="../backtest/#haa">미국판 보기 →</a>`;
+    } catch (e) { box.hidden = true; }
+  }
+
+  function renderMap(){
+    const first = c => { const i = TK[c] ? TK[c].p.findIndex(v => v != null) : -1; return i < 0 ? "–" : fmtM(MONTHS[i]); };
+    const rows = [...CFG.offensive.map(x => ({ ...x, grp: "공격" })), { ...CFG.canary, grp: "카나리아" }, ...CFG.cash.map(x => ({ ...x, grp: "현금" }))];
+    document.getElementById("haaMapBody").innerHTML = rows.map(x => `<tr>
+      <td><span class="tag ${x.grp === "현금" ? "safe" : x.grp === "카나리아" ? "eligible" : ""}">${x.grp}</span> ${x.role}</td>
+      <td class="mono">${x.us}</td>
+      <td>${x.code ? `<strong>${x.name}</strong>` : `<span class="nm">국내 상장 ETF 없음 (빈칸)</span>`}</td>
+      <td class="mono">${x.code || ""}</td>
+      <td class="nm">${x.index}</td>
+      <td>${x.code ? (x.hedged ? "환헤지(H)" : "환노출") : ""}</td>
+      <td class="mono">${x.code ? first(x.code) : ""}</td></tr>`).join("");
+  }
+
+  function renderSignal(){
+    const i = MONTHS.length - 1;
+    const sig = haaSignal(i);
+    renderUsCompare(sig);
+    const nextM = (parseInt(MONTHS[i].slice(4), 10) % 12) + 1;
+    const badge = document.getElementById("haaModeBadge");
+    badge.className = "holding-mode " + (sig.mode === "offensive" ? "offensive" : "defensive");
+    badge.innerHTML = `<span class="dot"></span>${sig.mode === "offensive" ? "공격 모드" : "방어 모드"}`;
+    document.getElementById("haaSignalSub").textContent =
+      `${fmtM(MONTHS[i])} 월말 가격 기준 → ${nextM}월 한 달 동안 보유할 자산입니다. 다음 갱신: ${nextM}월 말 가격이 나오는 다음 달 1일 아침.`;
+    const hold = Object.entries(sig.weights).sort((a, b) => b[1] - a[1]);
+    document.getElementById("haaHold").innerHTML = hold.map(([t, w]) => `
+      <div class="haa-hold-row"><div><span class="tk">${NAMES[t]}</span> ${hedgeTag(t)} <span class="nm">${t} · 미국 ${US(t)} 대응</span></div>
+      <div class="haa-hold-bar"><span style="width:${(w * 100).toFixed(0)}%"></span></div><div class="w">${(w * 100).toFixed(0)}%</div></div>`).join("");
+    const lbCells = t => LOOKBACKS.map(lb => { const v = lbRet(t, i, lb); return `<td class="num ${cls(v)}">${pctS(v == null ? null : v * 100)}</td>`; }).join("");
+    const momCell = t => `<td class="num ${cls(sig.mom[t])}" style="font-weight:700;">${pctS(sig.mom[t] == null ? null : sig.mom[t] * 100, 2)}</td>`;
+    document.getElementById("haaCanaryBody").innerHTML =
+      `<tr><td><strong>${NAMES[CANARY]}</strong> <span class="nm">카나리아 · 미국 ${US(CANARY)}</span></td>${lbCells(CANARY)}${momCell(CANARY)}<td>${sig.canary > 0 ? `<span class="tag eligible">양수 → 공격</span>` : `<span class="tag safe">0 이하 → 방어</span>`}</td></tr>` +
+      CASH.map(t => `<tr><td><strong>${NAMES[t]}</strong> <span class="nm">미국 ${US(t)} 대응</span></td>${lbCells(t)}${momCell(t)}<td>${t === sig.cash ? `<span class="tag eligible">현금자산으로 선택</span>` : ""}</td></tr>`).join("");
+    const n = topN();
+    document.getElementById("haaRankBody").innerHTML = sig.ranked.map((t, k) => {
+      let tag = "";
+      if (sig.mode === "offensive" && k < n) tag = sig.mom[t] > 0 ? `<span class="tag eligible">편입 ${(100 / n).toFixed(0)}%</span>` : `<span class="tag safe">음수 → ${sig.cash}로 대체</span>`;
+      else if (sig.mode === "defensive" && k < n) tag = `<span class="tag">방어 모드라 제외</span>`;
+      return `<tr><td class="rank-num">${k + 1}</td><td><strong>${NAMES[t]}</strong> ${hedgeTag(t)} <span class="nm">미국 ${US(t)} · ${SLOT[t].role}</span></td>${lbCells(t)}${momCell(t)}<td>${tag}</td></tr>`;
+    }).join("") + MISSING.map(x => `<tr><td class="rank-num">–</td><td><span class="nm">미국 ${x.us} · ${x.role}</span></td><td colspan="5" class="nm">국내 상장 ETF 없음 — 자리 비워 둠 (생기면 추가)</td><td><span class="tag">제외</span></td></tr>`).join("");
+  }
+
+  // ---------- 차트 ----------
+  const ns = "http://www.w3.org/2000/svg";
+  const el = (tag, attrs, parent) => { const n = document.createElementNS(ns, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); parent.appendChild(n); return n; };
+  const tip = document.getElementById("floatTip");
+  function chart(svgId, H, series, s, opts){
+    const svg = document.getElementById(svgId);
+    svg.innerHTML = "";
+    const W = 960, P = { t: 12, r: 60, b: 26, l: 60 };
+    const n = series[0].v.length;
+    const all = series.flatMap(x => x.v);
+    const tf = opts.log ? Math.log10 : v => v;
+    let lo = tf(Math.min(...all)), hi = tf(Math.max(...all));
+    if (opts.dd){ hi = 0; lo = Math.min(lo, -5); }
+    const pad = opts.dd ? 0 : (hi - lo) * 0.06;
+    lo -= pad; hi += pad;
+    const x = k => P.l + k / (n - 1) * (W - P.l - P.r);
+    const y = v => P.t + (1 - (tf(v) - lo) / (hi - lo)) * (H - P.t - P.b);
+    // 방어 모드 구간 음영
+    if (opts.shade) opts.shade.forEach((def, k) => { if (def) el("rect", { x: x(k), y: P.t, width: Math.max(1, x(k + 1) - x(k)), height: H - P.t - P.b, fill: "var(--surface-2)" }, svg); });
+    const ticks = [];
+    if (opts.log){
+      for (let p = Math.floor(lo); p <= Math.ceil(hi); p++) for (const m of [1, 2, 5]){ const v = m * 10 ** p; if (Math.log10(v) >= lo && Math.log10(v) <= hi) ticks.push(v); }
+      // 기간이 짧아 범위가 좁으면 100만 원 단위 눈금으로 보충
+      if (ticks.length < 3){ ticks.length = 0; const a = 10 ** lo, b = 10 ** hi, st = Math.max(1e6, Math.ceil((b - a) / 4 / 1e6) * 1e6); for (let v = Math.ceil(a / st) * st; v <= b; v += st) ticks.push(v); }
+    }
+    else { const step = opts.dd ? (lo < -40 ? 20 : lo < -20 ? 10 : 5) : 1; for (let v = 0; v >= lo; v -= step) ticks.push(v); }
+    ticks.forEach(v => {
+      el("line", { x1: P.l, x2: W - P.r, y1: y(v), y2: y(v), stroke: v === 0 && opts.dd ? "var(--border-strong)" : "var(--border)", "stroke-width": 1 }, svg);
+      el("text", { x: P.l - 8, y: y(v) + 3.5, "text-anchor": "end", "font-size": 10.5, fill: "var(--muted)", "font-family": "var(--font-mono)" }, svg)
+        .textContent = opts.dd ? v + "%" : (v >= 1e8 ? (v / 1e8).toFixed(1) + "억" : (v / 1e4).toFixed(0) + "만");
+    });
+    const years = [];
+    for (let k = 0; k < n; k++) if (MONTHS[s + k].slice(4) === "01") years.push(k);
+    const every = Math.ceil(years.length / 9) || 1;
+    years.filter((_, j) => j % every === 0).forEach(k =>
+      el("text", { x: x(k), y: H - 7, "text-anchor": "middle", "font-size": 10.5, fill: "var(--muted)", "font-family": "var(--font-mono)" }, svg).textContent = MONTHS[s + k].slice(0, 4));
+    [...series].reverse().forEach(sr => el("polyline", { points: sr.v.map((v, k) => `${x(k).toFixed(1)},${y(v).toFixed(1)}`).join(" "), fill: "none",
+      stroke: sr.color, "stroke-width": sr.w || 2, "stroke-dasharray": sr.dash || "", "stroke-linejoin": "round" }, svg));
+    if (!opts.dd){
+      const labels = series.map(sr => ({ sr, y: y(sr.v[n - 1]) })).sort((a, b) => a.y - b.y);
+      for (let j = 1; j < labels.length; j++) if (labels[j].y - labels[j - 1].y < 13) labels[j].y = labels[j - 1].y + 13;
+      labels.forEach(l => {
+        el("circle", { cx: x(n - 1), cy: y(l.sr.v[n - 1]), r: 3.5, fill: l.sr.color, stroke: "var(--surface)", "stroke-width": 1.5 }, svg);
+        el("text", { x: x(n - 1) + 8, y: l.y + 3.5, "font-size": 11, fill: "var(--ink-2)", "font-family": "var(--font-mono)", "font-weight": 600 }, svg).textContent = l.sr.short;
+      });
+    }
+    const vline = el("line", { y1: P.t, y2: H - P.b, stroke: "var(--muted)", "stroke-width": 1, "stroke-dasharray": "3,3", visibility: "hidden" }, svg);
+    const dots = series.map(sr => el("circle", { r: 4, fill: sr.color, stroke: "var(--surface)", "stroke-width": 1.5, visibility: "hidden" }, svg));
+    const move = evt => {
+      const rect = svg.getBoundingClientRect(), pt = evt.touches ? evt.touches[0] : evt;
+      const k = Math.max(0, Math.min(n - 1, Math.round(((pt.clientX - rect.left) / rect.width * W - P.l) / (W - P.l - P.r) * (n - 1))));
+      vline.setAttribute("x1", x(k)); vline.setAttribute("x2", x(k)); vline.setAttribute("visibility", "visible");
+      series.forEach((sr, j) => { dots[j].setAttribute("cx", x(k)); dots[j].setAttribute("cy", y(sr.v[k])); dots[j].setAttribute("visibility", "visible"); });
+      const extra = opts.info ? opts.info(k) : "";
+      tip.innerHTML = `<div class="tt-date">${fmtM(MONTHS[s + k])}</div>` + series.map(sr =>
+        `<div class="tt-row"><span class="k">${sr.short}</span><span>${opts.dd ? sr.v[k].toFixed(1) + "%" : usd(sr.v[k])}</span></div>`).join("") + extra;
+      tip.hidden = false;
+      const w = tip.offsetWidth, h = tip.offsetHeight;
+      let tx = pt.clientX + 16, ty = pt.clientY + 16;
+      if (tx + w > window.innerWidth - 8) tx = pt.clientX - w - 16;
+      if (ty + h > window.innerHeight - 8) ty = pt.clientY - h - 16;
+      tip.style.left = Math.max(8, tx) + "px"; tip.style.top = Math.max(8, ty) + "px";
+    };
+    const leave = () => { vline.setAttribute("visibility", "hidden"); dots.forEach(d => d.setAttribute("visibility", "hidden")); tip.hidden = true; };
+    svg.addEventListener("mousemove", move); svg.addEventListener("mouseleave", leave);
+    svg.addEventListener("touchmove", move, { passive: true }); svg.addEventListener("touchend", leave);
+  }
+
+  // ---------- 화면 ----------
+  const holdText = w => Object.entries(w).sort((a, b) => b[1] - a[1]).map(([t, x]) => `${NAMES[t]} ${(x * 100).toFixed(0)}%`).join(", ");
+  function render(){
+    document.querySelectorAll("[data-haa]").forEach(g => g.querySelectorAll("button").forEach(b =>
+      b.classList.toggle("active", String(hs[g.dataset.haa]) === b.dataset.value)));
+    document.getElementById("haaTopGroup").hidden = hs.variant === "simple";
+    document.getElementById("haaVariantHint").textContent = hs.variant === "simple"
+      ? `공격 모드에서 ${NAMES[BENCH]} 하나만 보유 (모멘텀이 음수면 현금자산).`
+      : `국내 상장 공격자산 ${OFFENSIVE.length}종 중 상위 자산을 같은 비중으로 (원자재 자리는 국내 ETF가 없어 제외).`;
+    const first = firstValid();
+    const sel = document.getElementById("haaStart");
+    sel.innerHTML = MONTHS.slice(first, MONTHS.length - 12).map(m => `<option value="${m}">${fmtM(m)} 부터</option>`).join("");
+    if (!hs.start || MONTHS.indexOf(hs.start) < first) hs.start = MONTHS[first];
+    sel.value = hs.start;
+
+    renderSignal();
+    const res = run();
+    const sH = stats(res.nav, res.s), sS = stats(res.spy, res.s), s64 = stats(res.b6040, res.s);
+    const defRatio = res.log.filter(l => l.mode === "defensive").length / res.log.length * 100;
+    const years = res.log.length / 12;
+    document.getElementById("haaTiles").innerHTML = `
+      <div class="stat-tile"><span class="label">최종 잔고</span><span class="value">${usd(sH.final)}</span><span class="sub">${fmtM(MONTHS[res.s])} 시작 1,000만 원 · ${years.toFixed(1)}년</span></div>
+      <div class="stat-tile"><span class="label">연평균(CAGR)</span><span class="value" style="color:${sH.cagr >= 0 ? "var(--up)" : "var(--down)"}">${pctS(sH.cagr, 2)}</span><span class="sub">S&P500 ${pctS(sS.cagr, 2)} · 60/40 ${pctS(s64.cagr, 2)}</span></div>
+      <div class="stat-tile"><span class="label">최대낙폭(MDD)</span><span class="value">${sH.mdd.toFixed(1)}%</span><span class="sub">S&P500 ${sS.mdd.toFixed(1)}% · 60/40 ${s64.mdd.toFixed(1)}%</span></div>
+      <div class="stat-tile"><span class="label">샤프 비율</span><span class="value">${sH.sharpe.toFixed(2)}</span><span class="sub">S&P500 ${sS.sharpe.toFixed(2)} · 방어 모드 ${defRatio.toFixed(0)}% 기간</span></div>`;
+    const series = [
+      { short: "HAA", label: hs.variant === "simple" ? "HAA-Simple" : `HAA-Balanced (상위 ${hs.topN})`, color: "var(--s1)", w: 2.6, v: res.nav, st: sH },
+      { short: "S&P500", label: NAMES[BENCH] + " 단순 보유", color: "var(--s2)", w: 1.8, v: res.spy, st: sS },
+      { short: "60/40", label: "60/40 (" + NAMES[BENCH] + "·" + NAMES[BOND] + ")", color: "var(--ink-2)", w: 1.6, dash: "6,4", v: res.b6040, st: s64 },
+    ];
+    document.getElementById("haaLegend").innerHTML = series.map(sr =>
+      `<div class="legend-item"><span class="legend-swatch ${sr.dash ? "dash" : ""}" style="background:${sr.color}"></span>${sr.label}</div>`).join("");
+    const shade = [false, ...res.log.map(l => l.mode === "defensive")];
+    const info = k => k === 0 ? "" : `<div class="tt-row"><span class="k">HAA 보유</span><span>${holdText(res.log[k - 1].weights)}</span></div>`;
+    chart("haaChart", 340, series, res.s, { log: true, info });
+    chart("haaDD", 170, series.map(sr => ({ ...sr, v: sr.st.dd, w: Math.min(sr.w, 2) })), res.s, { dd: true, shade });
+
+    document.getElementById("haaStatBody").innerHTML = series.map((sr, j) => `<tr class="${j === 0 ? "port" : ""}">
+      <td class="name"><span class="sw" style="background:${sr.color}"></span>${sr.label}</td>
+      <td class="num">${usd(sr.st.final)}</td><td class="num ${cls(sr.st.cagr)}">${pctS(sr.st.cagr, 2)}</td>
+      <td class="num">${sr.st.vol.toFixed(1)}%</td><td class="num">${sr.st.mdd.toFixed(1)}%</td>
+      <td class="num">${sr.st.sharpe.toFixed(2)}</td><td class="num ${cls(sr.st.worst)}">${pctS(sr.st.worst, 1)}</td>
+      <td class="num">${sr.st.up.toFixed(0)}%</td><td class="num">${j === 0 ? defRatio.toFixed(0) + "%" : "–"}</td></tr>`).join("");
+
+    const rows = [];
+    let k0 = 0;
+    for (let k = 1; k < res.nav.length; k++){
+      const ym = MONTHS[res.s + k];
+      if (ym.slice(4) === "12" || k === res.nav.length - 1){
+        rows.push({ y: ym.slice(0, 4), partial: MONTHS[res.s + k0].slice(4) !== "12" || ym.slice(4) !== "12",
+                    v: series.map(sr => (sr.v[k] / sr.v[k0] - 1) * 100) });
+        k0 = k;
+      }
+    }
+    document.getElementById("haaYearBody").innerHTML = rows.reverse().map(r =>
+      `<tr><td class="mono">${r.y}${r.partial ? "*" : ""}</td>${r.v.map(v => `<td class="num ${cls(v)}">${pctS(v, 1)}</td>`).join("")}</tr>`).join("");
+    document.getElementById("haaLogBody").innerHTML = [...res.log].reverse().map(l => `<tr>
+      <td class="mono">${fmtM(l.ym)}</td>
+      <td>${l.mode === "offensive" ? `<span class="tag">공격</span>` : `<span class="tag safe">방어</span>`}</td>
+      <td style="font-size:12px;">${holdText(l.weights)}</td>
+      <td class="num ${cls(l.r)}">${pctS(l.r, 2)}</td></tr>`).join("");
+  }
+
+  document.querySelectorAll("[data-haa]").forEach(g => g.querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
+    const key = g.dataset.haa;
+    hs[key] = key === "topN" ? parseInt(b.dataset.value, 10) : b.dataset.value;
+    if (key === "variant") hs.start = null;
+    render();
+  })));
+  document.getElementById("haaStart").addEventListener("change", e => { hs.start = e.target.value; render(); });
+  renderMap();
+  render();
+}
+
+
+const TABS = ["rotation", "haa"];
+function showTab(name){
+  document.querySelectorAll(".tabs button[data-tab]").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === name)));
+  TABS.forEach(t => document.getElementById("pane-" + t).hidden = t !== name);
+  try { history.replaceState(null, "", "#" + name); } catch (e) {}
+  try { localStorage.setItem("krTab", name); } catch (e) {}
+}
+
+async function main(){
+  const DATA = await (await fetch("data.json", { cache: "no-store" })).json();
+  const raw = {};
+  for (const code in DATA.rotation.universe){
+    const p = DATA.tickers[code] ? DATA.tickers[code].p : [];
+    raw[code] = { ...DATA.rotation.universe[code], prices: DATA.months.map((m, i) => [m, p[i]]).filter(x => x[1] != null) };
+  }
+  const last = DATA.lastMonth.slice(0, 4) + "." + DATA.lastMonth.slice(4);
+  document.getElementById("updatedAt").textContent = "마지막 데이터: " + last + " 월말 · 갱신 " + DATA.updated + " · 매월 1일 아침 자동 갱신";
+  document.querySelectorAll(".lastMonthNote").forEach(e => e.textContent = last);
+  initRotation(raw, DATA.rotation);
+  initHaa(DATA);
+  document.querySelectorAll(".tabs button[data-tab]").forEach(b => b.addEventListener("click", () => showTab(b.dataset.tab)));
+  let tab = location.hash.slice(1);
+  if (!TABS.includes(tab)){ try { tab = localStorage.getItem("krTab"); } catch (e) {} }
+  showTab(TABS.includes(tab) ? tab : "rotation");
+  window.addEventListener("hashchange", () => { const t = location.hash.slice(1); if (TABS.includes(t)) showTab(t); });
+}
+main().catch(e => {
+  document.getElementById("updatedAt").innerHTML = '<span class="load-error">데이터를 불러오지 못했습니다: ' + e.message + '</span>';
+  console.error(e);
+});
+</script>
+</body>
+</html>
