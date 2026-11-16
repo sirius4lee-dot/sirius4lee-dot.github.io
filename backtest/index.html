@@ -379,6 +379,7 @@ td.mono, th.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;
 .haa-hold-bar span{display:block;height:100%;background:var(--s1);border-radius:0 4px 4px 0;}
 .nm{color:var(--muted);font-size:11.5px;}
 .haa-mom-table{min-width:520px;}
+#currentHoldings .holding-card .code{font-family:var(--font-sans);}
 #haaCmpBody tr{cursor:pointer;}
 #haaCmpBody tr.sel td{background:var(--accent-soft);}
 .haa-mom-table td.num,.haa-mom-table th.num{text-align:right;font-family:var(--font-mono);font-variant-numeric:tabular-nums;white-space:nowrap;}
@@ -403,9 +404,9 @@ td.mono, th.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;
   <div class="updated" id="updatedAt">데이터 불러오는 중…</div>
   <div class="tab-pane" id="pane-rotation">
   <header class="hero">
-    <div class="eyebrow">GICS 11개 섹터 · 123개 미국 종목 · 월간 리밸런싱</div>
-    <h1>미국 섹터 종목 백테스터</h1>
-    <p>GICS 11개 섹터의 대표 대형주(섹터당 상위 10종목) + 안전자산 4종 실제 월봉 데이터로, 매월 모멘텀이 가장 강한 상위 섹터를 고르고 그 안에서 다시 상위 종목을 골라 리밸런싱하는 2단계 로테이션 전략을 백테스트합니다. 몇 개 섹터, 섹터당 몇 종목이 최적인지 직접 비교해보세요.</p>
+    <div class="eyebrow">Finviz 11개 섹터 · 섹터별 시가총액 상위 10종목 · 월간 리밸런싱</div>
+    <h1>미국 섹터 종목 백테스터 - 장우석방식</h1>
+    <p>매월 말 모멘텀이 가장 강한 섹터를 고르고, 그 섹터 안에서는 <strong>시가총액이 큰 종목부터</strong> 편입하는 전략을 백테스트합니다. 섹터와 종목은 섹터 데일리와 같은 Finviz 분류를 따르며, 섹터마다 시가총액 상위 10종목이 후보입니다. 아래 "이번 달 보유 종목"과 "섹터별 종목 구성"에서 어떤 종목이 왜 뽑혔는지 볼 수 있습니다.</p>
   </header>
 
   <section class="panel controls" aria-label="전략 설정">
@@ -421,7 +422,7 @@ td.mono, th.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;
       <div class="control-group">
         <label for="topSectors">편입 섹터 수</label>
         <select id="topSectors"></select>
-        <span class="hint">섹터 점수 = 그 섹터 후보 종목들의 모멘텀 평균</span>
+        <span class="hint">섹터 점수 = 그 섹터 시가총액 상위 10종목의 모멘텀 평균. 점수가 높은 섹터부터 편입</span>
       </div>
       <div class="control-group">
         <label>섹터당 편입 종목 수</label>
@@ -432,6 +433,7 @@ td.mono, th.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;
           <button data-value="4" type="button">4</button>
           <button data-value="5" type="button">5</button>
         </div>
+        <span class="hint">뽑힌 섹터 안에서 시가총액이 큰 순서대로 편입</span>
       </div>
       <div class="control-group">
         <label>섹터 내 비중 배분</label>
@@ -439,7 +441,7 @@ td.mono, th.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;
           <button data-value="equal" class="active" type="button">균등가중</button>
           <button data-value="cap" type="button">시가총액 비례</button>
         </div>
-        <span class="hint">시가총액 비례는 현재 발행주식수 × 그 시점 주가로 근사 계산 (섹터당 종목 1개일 땐 두 방식 동일)</span>
+        <span class="hint">편입된 종목끼리 같은 비중으로 살지, 시가총액에 비례해 살지 (섹터당 1종목이면 동일)</span>
       </div>
       <div class="control-group">
         <label>방어자산 편입 종목 수</label>
@@ -477,14 +479,14 @@ td.mono, th.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;
 
   <section class="two-col">
     <div class="panel">
-      <h2>최근 리밸런싱 구성</h2>
+      <h2>이번 달 보유 종목</h2>
       <div id="currentHoldings"></div>
     </div>
     <div class="panel">
       <h2>이번 달 섹터 모멘텀 순위</h2>
       <div class="table-scroll">
         <table>
-          <thead><tr><th>#</th><th>섹터</th><th class="mono">모멘텀 점수</th><th>상태</th></tr></thead>
+          <thead><tr><th>#</th><th>섹터</th><th class="mono">모멘텀 점수</th><th>상태</th><th>시가총액 상위 종목</th></tr></thead>
           <tbody id="sectorRankBody"></tbody>
         </table>
       </div>
@@ -492,10 +494,11 @@ td.mono, th.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;
   </section>
 
   <section class="panel">
-    <h2>종목 유니버스 (<span id="universeCount">123</span>종목 · 산업재 섹터에 2026년 신규상장 SPCX 포함)</h2>
-    <div class="table-scroll">
+    <h2>섹터별 종목 구성 (Finviz 섹터 · 시가총액 순)</h2>
+    <p class="chart-sub" id="compSub"></p>
+    <div class="table-scroll log-table-wrap">
       <table>
-        <thead><tr><th class="mono">티커</th><th>분류</th><th class="mono">데이터 시작</th><th>상태</th></tr></thead>
+        <thead><tr><th>순위</th><th class="mono">티커</th><th>회사</th><th class="mono" style="text-align:right;">시가총액</th><th class="mono" style="text-align:right;">모멘텀</th><th>이번 달</th></tr></thead>
         <tbody id="universeBody"></tbody>
       </table>
     </div>
@@ -514,8 +517,9 @@ td.mono, th.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;
   <footer class="notes">
     <h3>백테스트 전제 및 한계 — 반드시 읽어주세요</h3>
     <ul>
-      <li><strong>"시가총액 비례" 배분은 실시간 시가총액이 아니라 근사치입니다.</strong> 현재(2026년 9월) 발행주식수 × 과거 시점 주가로 역산했습니다 — 자사주매입·유상증자로 발행주식수가 실제로 변했다면 과거 시점 비중이 정확하지 않을 수 있습니다.</li>
-      <li><strong>전체 미국 시장이 아니라 섹터당 시가총액 상위 10개 대형주(총 110종목)로 후보군을 구성했습니다.</strong> 수천 개 상장사를 전부 담을 순 없어 대표성 있는 대형주 위주로 좁혔습니다 — 중소형주 강세 구간은 반영되지 않습니다.</li>
+      <li><strong>섹터와 종목은 Finviz 기준입니다.</strong> 섹터 데일리와 같은 11개 섹터이고, 섹터마다 현재 시가총액 상위 10종목(<span id="rotAsOf"></span> Finviz 기준)이 후보입니다. 미국에 상장된 해외 기업(TSM·도요타·셸 등)도 포함되며, GOOGL/GOOG처럼 주식 종류가 여러 개인 회사는 하나로 합쳤습니다. 후보 목록은 매월 1일 갱신 때 그 시점의 Finviz 순위로 바뀝니다.</li>
+      <li><strong>과거 시점의 시가총액 순위는 추정치입니다.</strong> "현재 시가총액 × (그때 주가 ÷ 현재 주가)"로 역산해 순서를 매겼습니다. 자사주 매입·증자로 주식 수가 달라진 만큼은 반영되지 않습니다.</li>
+      <li><strong>지금의 상위 10종목을 과거에 그대로 적용했습니다(생존 편향).</strong> 과거에는 상위였지만 지금은 밀려난 종목은 후보에 없어서, 실제로 그때 이 전략을 썼다면 결과가 이보다 나빴을 수 있습니다.</li>
       <li><strong>배당 재투자가 반영된 조정종가(Adjusted Close)를 사용했습니다</strong> — 채권/금 ETF(TLT·SHY·BIL·GLD)를 포함해 총수익(Total Return)에 가깝게 계산되어, 앞선 국내 ETF 백테스터보다 안전자산 구간이 더 정확합니다.</li>
       <li><strong>단일 과거 경로에 대한 백테스트입니다.</strong> 특정 구간(예: AI/반도체 랠리)에 크게 기여한 소수 종목이 결과를 좌우할 수 있어, 이 10년이 앞으로도 반복된다는 보장은 없습니다. 종목 수(Top-N)가 적을수록 이 효과가 커집니다.</li>
       <li><strong>매매수수료·환전 스프레드·세금(양도소득세 22%, 연 250만원 공제)이 전혀 반영되지 않았습니다.</strong> 월 단위로 종목을 교체하면 실제 수익률은 이보다 낮아집니다.</li>
@@ -888,28 +892,64 @@ function score(code, i, weights){
   return total;
 }
 
+// i번째 월말의 추정 시가총액 = 현재 시가총액(Finviz) × (그때 주가 ÷ 가장 최근 주가)
 function approxMarketCap(code, i){
   const info = RAW_DATA[code];
-  if (!info.sharesOut) return null;
-  const pm = priceMap[code];
-  const p = pm.get(masterMonths[i]);
+  if (!info.capNow || !info.prices.length) return null;
+  const p = priceMap[code].get(masterMonths[i]);
   if (p === undefined) return null;
-  return info.sharesOut * p;
+  return info.capNow * p / info.prices[info.prices.length - 1][1];
 }
+function fmtCap(v){ return v >= 1e12 ? "$" + (v / 1e12).toFixed(2) + "T" : "$" + (v / 1e9).toFixed(0) + "B"; }
 
 function evalMonth(i, weights){
   const sectorScores = {};
   const stockScores = {};
   for (const sector of SECTOR_NAMES){
-    const scored = SECTOR_MAP[sector]
-      .map(code => ({ code, s: score(code, i, weights) }))
-      .filter(x => x.s !== null);
+    // 종목은 그 달의 추정 시가총액이 큰 순서, 섹터 점수는 모멘텀이 계산되는 종목들의 평균
+    const members = SECTOR_MAP[sector]
+      .map(code => ({ code, s: score(code, i, weights), cap: approxMarketCap(code, i) }))
+      .filter(x => x.cap !== null)
+      .sort((a,b) => b.cap - a.cap);
+    members.forEach((x, k) => x.rank = k + 1);
+    const scored = members.filter(x => x.s !== null);
     if (scored.length === 0) continue;
-    scored.sort((a,b) => b.s - a.s);
-    stockScores[sector] = scored;
+    stockScores[sector] = members;
     sectorScores[sector] = scored.reduce((sum,x) => sum + x.s, 0) / scored.length;
   }
   return { sectorScores, stockScores };
+}
+
+// i번째 월말 기준으로 다음 달에 보유할 종목 고르기
+function pickFor(i, weights){
+  const { sectorScores, stockScores } = evalMonth(i, weights);
+  const rankedSectors = Object.entries(sectorScores).sort((a,b) => b[1]-a[1]);
+  const eligibleSectors = rankedSectors.filter(([s,sc]) => sc > 0);
+  let mode = "offensive";
+  const picksBySector = [];
+  if (eligibleSectors.length > 0){
+    const chosen = eligibleSectors.slice(0, state.topSectors);
+    const wSector = 1 / chosen.length;
+    for (const [sector] of chosen){
+      const members = stockScores[sector].slice(0, state.topn);   // 시가총액이 큰 순서대로
+      const totalCap = members.reduce((sum,x) => sum + x.cap, 0);
+      const picks = members.map(m => ({ code: m.code, s: m.s, rank: m.rank, cap: m.cap,
+        weight: wSector * (state.weightMode === "cap" ? m.cap / totalCap : 1 / members.length) }));
+      picksBySector.push({ sector, picks });
+    }
+  } else {
+    mode = "defensive";
+    const safeScored = SAFE_CODES
+      .map(code => ({ code, s: score(code, i, weights) }))
+      .filter(x => x.s !== null)
+      .sort((a,b) => b.s - a.s)
+      .slice(0, state.safen);
+    if (safeScored.length > 0){
+      const w = 1 / safeScored.length;
+      picksBySector.push({ sector: "안전자산", picks: safeScored.map(m => ({ code: m.code, s: m.s, weight: w })) });
+    }
+  }
+  return { i, mode, picksBySector, sectorScores, stockScores };
 }
 
 function runBacktest(){
@@ -920,51 +960,9 @@ function runBacktest(){
   let nav = 10_000, spyNav = 10_000, qqqNav = 10_000;
   const log = [];
   const navSeries = [{ ym: masterMonths[startIdx], nav, spyNav, qqqNav }];
-  let lastEval = null;
 
   for (let i = startIdx; i < masterMonths.length - 1; i++){
-    const { sectorScores, stockScores } = evalMonth(i, weights);
-    lastEval = { sectorScores, stockScores, i };
-    const rankedSectors = Object.entries(sectorScores).sort((a,b) => b[1]-a[1]);
-    const eligibleSectors = rankedSectors.filter(([s,sc]) => sc > 0);
-
-    let mode = "offensive";
-    const picksBySector = [];
-    if (eligibleSectors.length > 0){
-      const chosen = eligibleSectors.slice(0, state.topSectors);
-      const wSector = 1 / chosen.length;
-      for (const [sector] of chosen){
-        let members = stockScores[sector].filter(x => x.s > 0).slice(0, state.topn);
-        if (members.length === 0) members = stockScores[sector].slice(0,1);
-        let picks;
-        if (state.weightMode === "cap"){
-          const caps = members.map(m => ({ m, cap: approxMarketCap(m.code, i) })).filter(x => x.cap && x.cap > 0);
-          if (caps.length > 0){
-            const totalCap = caps.reduce((sum,x) => sum + x.cap, 0);
-            picks = caps.map(x => ({ code: x.m.code, s: x.m.s, weight: wSector * (x.cap / totalCap) }));
-          } else {
-            const wStock = wSector / members.length;
-            picks = members.map(m => ({ code: m.code, s: m.s, weight: wStock }));
-          }
-        } else {
-          const wStock = wSector / members.length;
-          picks = members.map(m => ({ code: m.code, s: m.s, weight: wStock }));
-        }
-        picksBySector.push({ sector, picks });
-      }
-    } else {
-      mode = "defensive";
-      const safeScored = SAFE_CODES
-        .map(code => ({ code, s: score(code, i, weights) }))
-        .filter(x => x.s !== null)
-        .sort((a,b) => b.s - a.s)
-        .slice(0, state.safen);
-      if (safeScored.length > 0){
-        const w = 1 / safeScored.length;
-        picksBySector.push({ sector: "안전자산", picks: safeScored.map(m => ({ code: m.code, s: m.s, weight: w })) });
-      }
-    }
-
+    const { mode, picksBySector } = pickFor(i, weights);
     const nextYm = masterMonths[i+1];
     let monthRet = 0;
     for (const block of picksBySector){
@@ -985,7 +983,9 @@ function runBacktest(){
     log.push({ month: nextYm, mode, picksBySector, ret: monthRet*100, nav, spyNav, qqqNav });
     navSeries.push({ ym: nextYm, nav, spyNav, qqqNav });
   }
-  return { log, navSeries, lastEval };
+  // 가장 최근 월말 기준 신호 = 이번 달에 보유할 종목
+  const signal = pickFor(masterMonths.length - 1, weights);
+  return { log, navSeries, signal };
 }
 
 function computeStats(navSeries, log){
@@ -1054,62 +1054,79 @@ function renderStats(stats){
   subEl.textContent = "SPY CAGR " + fmtPct(stats.cagrSpy,2);
 }
 
-function renderHoldings(log){
+function renderHoldings(signal, log){
   const box = document.getElementById("currentHoldings");
-  if (log.length === 0){ box.innerHTML = "<p style='color:var(--muted);font-size:13px;'>표시할 구간이 없습니다.</p>"; return; }
-  const last = log[log.length-1];
-  const modeLabel = last.mode === "offensive" ? "공격 모드" : "방어 모드 (전 섹터 모멘텀 약세)";
-  let html = `<div class="holding-mode ${last.mode}"><span class="dot"></span>${modeLabel}</div><div class="holding-list">`;
-  for (const block of last.picksBySector){
-    html += `<div class="sector-block"><div class="sector-name">${block.sector}</div>`;
+  const modeLabel = signal.mode === "offensive" ? "공격 모드" : "방어 모드 (전 섹터 모멘텀 약세)";
+  let html = `<div class="holding-mode ${signal.mode}"><span class="dot"></span>${modeLabel}</div><div class="holding-list">`;
+  for (const block of signal.picksBySector){
+    const sc = signal.sectorScores[block.sector];
+    html += `<div class="sector-block"><div class="sector-name">${block.sector}${sc !== undefined ? ` · 섹터 모멘텀 ${(sc*100).toFixed(1)}%` : ""}</div>`;
     for (const p of block.picks){
-      html += `<div class="holding-card"><div><div class="name">${p.code}</div></div><div class="weight">${(p.weight*100).toFixed(1)}%</div></div>`;
+      const info = RAW_DATA[p.code];
+      const sub = p.rank ? `${info.name} · 섹터 내 시가총액 ${p.rank}위 (${fmtCap(p.cap)})` : info.category;
+      html += `<div class="holding-card"><div><div class="name">${p.code}</div><div class="code">${sub}</div></div><div class="weight">${(p.weight*100).toFixed(1)}%</div></div>`;
     }
     html += `</div>`;
   }
-  html += `</div><div class="holding-asof">기준월: ${fmtMonth(last.month)} · 이 달 실현 수익률 ${fmtPct(last.ret)}</div>`;
+  const nextM = (parseInt(masterMonths[signal.i].slice(4), 10) % 12) + 1;
+  const last = log[log.length - 1];
+  html += `</div><div class="holding-asof">${fmtMonth(masterMonths[signal.i])} 월말 가격 기준 → ${nextM}월 한 달 보유` +
+    (last ? ` · 지난달(${fmtMonth(last.month)}) 전략 수익률 ${fmtPct(last.ret)}` : "") + `</div>`;
   box.innerHTML = html;
 }
 
-function renderSectorRank(lastEval){
+function sectorStatus(signal){
+  const ranked = Object.entries(signal.sectorScores).sort((a,b) => b[1]-a[1]);
+  const chosen = new Set(signal.mode === "offensive" ? signal.picksBySector.map(b => b.sector) : []);
+  return { ranked, chosen };
+}
+
+function renderSectorRank(signal){
   const body = document.getElementById("sectorRankBody");
   body.innerHTML = "";
-  if (!lastEval){ return; }
-  const ranked = Object.entries(lastEval.sectorScores).sort((a,b) => b[1]-a[1]);
+  const { ranked, chosen } = sectorStatus(signal);
   ranked.forEach(([sector, sc], idx) => {
     const tr = document.createElement("tr");
-    const eligible = sc > 0;
+    const tag = chosen.has(sector) ? `<span class="tag eligible">편입</span>` : (sc > 0 ? `<span class="tag">후보 (순위 밖)</span>` : `<span class="tag">제외 (모멘텀 음수)</span>`);
+    const tops = signal.stockScores[sector].slice(0, state.topn).map(x => x.code).join(", ");
     tr.innerHTML = `
       <td class="rank-num">${idx+1}</td>
       <td>${sector}</td>
       <td class="mono ${sc>=0?"ret-up":"ret-down"}">${(sc*100).toFixed(1)}%</td>
-      <td>${eligible ? `<span class="tag eligible">편입 후보</span>` : `<span class="tag">제외</span>`}</td>`;
+      <td>${tag}</td>
+      <td class="mono" style="font-size:12px;">${tops}</td>`;
     body.appendChild(tr);
   });
 }
 
-function renderUniverse(){
+// 섹터별 후보 10종목을 시가총액 순으로 보여주고, 이번 달 편입 종목 표시
+function renderUniverse(signal){
   const body = document.getElementById("universeBody");
-  body.innerHTML = "";
-  const allCodes = Object.keys(RAW_DATA).sort((a,b) => {
-    const sa = a.sector||"", sb = b.sector||"";
-    const catA = RAW_DATA[a].category, catB = RAW_DATA[b].category;
-    return (catA||"").localeCompare(catB||"") || a.localeCompare(b);
+  const { ranked, chosen } = sectorStatus(signal);
+  const weightOf = {};
+  signal.picksBySector.forEach(b => b.picks.forEach(p => weightOf[p.code] = p.weight));
+  let html = "";
+  ranked.forEach(([sector, sc], idx) => {
+    const en = RAW_DATA[signal.stockScores[sector][0].code].sectorEn;
+    html += `<tr style="background:var(--surface-2);"><td colspan="6"><strong>${idx+1}. ${sector}</strong> <span style="color:var(--muted);font-size:11.5px;">${en}</span>
+      · 섹터 모멘텀 <span class="${sc>=0?"ret-up":"ret-down"}">${(sc*100).toFixed(1)}%</span>
+      ${chosen.has(sector) ? `<span class="tag eligible">편입 섹터</span>` : ""}</td></tr>`;
+    signal.stockScores[sector].forEach(x => {
+      const info = RAW_DATA[x.code];
+      const picked = weightOf[x.code] !== undefined && chosen.has(sector);
+      const country = info.country && info.country !== "USA" ? ` <span class="tag">${info.country}</span>` : "";
+      html += `<tr>
+        <td class="rank-num">${x.rank}</td>
+        <td class="mono" style="font-weight:600;">${x.code}</td>
+        <td>${info.name}${country}</td>
+        <td class="mono" style="text-align:right;">${fmtCap(x.cap)}</td>
+        <td class="mono ${x.s === null ? "" : (x.s>=0?"ret-up":"ret-down")}" style="text-align:right;">${x.s === null ? "–" : (x.s*100).toFixed(1) + "%"}</td>
+        <td>${picked ? `<span class="tag eligible">편입 ${(weightOf[x.code]*100).toFixed(1)}%</span>` : ""}</td></tr>`;
+    });
   });
-  for (const code of allCodes){
-    const info = RAW_DATA[code];
-    const tr = document.createElement("tr");
-    const isSafe = info.tag === "safe", isBench = info.tag === "bench";
-    const monthsHeld = masterMonths.length - masterMonths.indexOf(info.prices[0][0]);
-    const warmingUp = monthsHeld < 13 && !isBench;
-    tr.innerHTML = `
-      <td class="mono">${code}</td>
-      <td><span class="tag ${isSafe?"safe":""}">${info.category}</span></td>
-      <td class="mono">${fmtMonth(info.prices[0][0])}</td>
-      <td>${warmingUp ? `<span class="tag" style="background:rgba(160,100,0,0.14);color:var(--warning);">최근 상장 · 모멘텀 계산 불가 (12개월 데이터 필요)</span>` : ""}</td>`;
-    body.appendChild(tr);
-  }
-  document.getElementById("universeCount").textContent = allCodes.length;
+  body.innerHTML = html;
+  document.getElementById("compSub").textContent =
+    `${fmtMonth(masterMonths[signal.i])} 월말 기준 · 섹터는 모멘텀 순, 종목은 시가총액 순 · 편입 섹터의 위에서부터 ${state.topn}종목이 이번 달 보유 종목 · 안전자산 후보 ${SAFE_CODES.join("·")}, 비교 기준 ${BENCH_CODES.join("·")}`;
 }
 
 function renderLog(log){
@@ -1263,18 +1280,18 @@ function renderChart(navSeries){
 }
 
 function render(){
-  const { log, navSeries, lastEval } = runBacktest();
+  const { log, navSeries, signal } = runBacktest();
   const stats = computeStats(navSeries, log);
   renderStats(stats);
-  renderHoldings(log);
-  renderSectorRank(lastEval);
+  renderHoldings(signal, log);
+  renderSectorRank(signal);
+  renderUniverse(signal);
   renderLog(log);
   renderChart(navSeries);
 }
 
 buildSelectOptions();
 wireSegmented();
-renderUniverse();
 render();
 
 }
@@ -2249,11 +2266,17 @@ function showTab(name){
 
 async function main(){
   const DATA = await (await fetch("data.json", { cache: "no-store" })).json();
+  // 섹터 로테이션 종목 구성: Finviz 섹터별 시가총액 상위 종목 (update_prices.py가 섹터 데일리 데이터에서 가져옴)
   const raw = {};
-  for (const code in DATA.rotation){
-    const p = DATA.tickers[code] ? DATA.tickers[code].p : [];
-    raw[code] = { ...DATA.rotation[code], prices: DATA.months.map((m, i) => [m, p[i]]).filter(x => x[1] != null) };
-  }
+  const ROT = DATA.rotation;
+  const pricesOf = code => { const p = DATA.tickers[code] ? DATA.tickers[code].p : []; return DATA.months.map((m, i) => [m, p[i]]).filter(x => x[1] != null); };
+  ROT.sectors.forEach(sec => sec.stocks.forEach(x => {
+    if (!DATA.tickers[x.t]) return;   // 가격을 받지 못한 종목은 후보에서 제외
+    raw[x.t] = { name: x.name, sector: sec.ko, sectorEn: sec.name, category: sec.ko, tag: null, capNow: x.cap, country: x.country, prices: pricesOf(x.t) };
+  }));
+  Object.entries(ROT.safe).forEach(([t, cat]) => raw[t] = { name: t, sector: null, category: cat, tag: "safe", prices: pricesOf(t) });
+  ROT.bench.forEach(t => raw[t] = { name: t, sector: null, category: "비교 기준", tag: "bench", prices: pricesOf(t) });
+  document.querySelectorAll("#rotAsOf").forEach(e => e.textContent = ROT.asOf || "");
   const last = DATA.lastMonth.slice(0, 4) + "." + DATA.lastMonth.slice(4);
   document.getElementById("updatedAt").textContent = "마지막 데이터: " + last + " 월말 · 갱신 " + DATA.updated + " · 매월 1일 아침 자동 갱신";
   document.querySelectorAll(".lastMonthNote").forEach(e => e.textContent = last);
