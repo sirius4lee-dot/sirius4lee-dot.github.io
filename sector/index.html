@@ -12,6 +12,8 @@
 .tabs a:hover{background:var(--surface-2);}
 .tabs a[aria-current="page"]{background:var(--accent);color:var(--accent-ink);}
 .updated{font-size:12px;color:var(--muted);}
+.fx-line{margin-top:-14px;}
+.fx-line b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums;}
 .load-error{color:var(--critical);font-size:14px;}
 :root{
   color-scheme: light;
@@ -306,6 +308,7 @@ td.mono, th.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;
     <a class="crosslink" href="../kr/">🇰🇷 한국 ETF 백테스터 (모멘텀 로테이션·HAA 한국 계좌) →</a>
   </div>
   <div class="updated" id="updatedAt">불러오는 중…</div>
+  <div class="updated fx-line" id="fxLine" hidden></div>
   <div class="tab-pane" id="pane-daily">
     <header class="hero">
       <div class="eyebrow">Finviz 11개 섹터 · 미국 상장 주식 전체 · 시가총액 기준</div>
@@ -729,6 +732,13 @@ function initDaily(){
 initDaily();
 renderDaily();
 document.getElementById("updatedAt").textContent = "마지막 업데이트: " + FV_DATA.fetchedAt + " 수집";
+const fx = FV_DATA.fx;
+if (fx && fx.rate && fx.avg3y) {
+  const won = v => Math.round(v).toLocaleString("ko-KR") + "원/$";
+  const el = document.getElementById("fxLine");
+  el.innerHTML = "업데이트 시점 환율 : <b>" + won(fx.rate) + "</b> · 과거 3년 평균 : <b>" + won(fx.avg3y) + "</b>" + (fx.stale ? " (이전 값)" : "");
+  el.hidden = false;
+}
 }
 main().catch(e => {
   document.getElementById("updatedAt").innerHTML = '<span class="load-error">데이터를 불러오지 못했습니다: ' + e.message + '</span>';
