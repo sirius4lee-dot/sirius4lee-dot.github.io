@@ -320,6 +320,12 @@ td.mono, th.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;
 .chip .x{border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:14px;width:24px;height:24px;border-radius:50%;}
 .chip .x:hover{background:var(--surface-2);color:var(--ink);}
 .chips-empty{font-size:13px;color:var(--muted);}
+.haa-custom{margin-top:16px;padding-top:16px;border-top:1px solid var(--border);gap:10px;}
+.haa-grid > *{min-width:0;}
+[data-haa="variant"]{flex-wrap:wrap;}
+[data-haa="variant"] button{flex:1 1 auto;}
+.haa-custom .chip{max-width:100%;min-width:0;}
+.haa-custom .chip .nm{min-width:0;flex:0 1 auto;}
 .weight-sum{font-size:12px;color:var(--ink-2);}
 .range-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
 .range-row select{min-width:120px;}
@@ -705,6 +711,7 @@ td.mono, th.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;
             <button data-value="simpleSpy" type="button">Simple-SPY</button>
             <button data-value="simpleQqq" type="button">Simple-QQQ</button>
             <button data-value="simpleBest" type="button">Simple-SPY/QQQ</button>
+            <button data-value="custom" type="button">자유도</button>
           </div>
           <span class="hint" id="haaVariantHint"></span>
         </div>
@@ -722,6 +729,18 @@ td.mono, th.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;
           <select id="haaStart"></select>
           <span class="hint">2008년 금융위기를 보려면 가장 이른 달을 고르세요.</span>
         </div>
+      </div>
+      <div class="control-group haa-custom" id="haaCustomBox" hidden>
+        <label for="haaTickerInput">공격자산 직접 선택 (최대 8개) — 티커나 회사명 입력, 칸에 편입될 때의 비중(%)</label>
+        <div class="ticker-entry">
+          <input id="haaTickerInput" list="tickerList" placeholder="예: AAPL, NVDA, SPY, Microsoft" autocomplete="off" spellcheck="false">
+          <button type="button" class="btn primary" id="haaTickerAdd">추가</button>
+          <button type="button" class="btn" id="haaEqual">모두 같은 비중으로</button>
+          <button type="button" class="btn" id="haaTickerClear">모두 지우기</button>
+        </div>
+        <div class="entry-msg" id="haaEntryMsg"></div>
+        <div class="chips" id="haaChips"></div>
+        <span class="hint" id="haaWeightHint"></span>
       </div>
     </section>
 
@@ -789,7 +808,7 @@ td.mono, th.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;
       </div>
       <p class="chart-sub" id="haaCmpSub"></p>
       <div class="chart-wrap">
-        <svg id="haaCmpChart" viewBox="0 0 960 340" preserveAspectRatio="xMidYMid meet" role="img" aria-label="HAA 변형 4가지와 단순 보유 비교"></svg>
+        <svg id="haaCmpChart" viewBox="0 0 960 340" preserveAspectRatio="xMidYMid meet" role="img" aria-label="HAA 변형 5가지와 단순 보유 비교"></svg>
       </div>
       <div class="table-scroll" style="margin-top:14px;">
         <table class="stat-table">
@@ -1954,13 +1973,26 @@ function initHaa(DATA){
   const NAMES = { SPY: "미국 대형주", IWM: "미국 소형주", VEA: "선진국 주식", VWO: "신흥국 주식", VNQ: "미국 리츠",
                   DBC: "원자재", IEF: "미국 중기국채", TLT: "미국 장기국채", TIP: "물가연동국채", BIL: "초단기 국채(현금)" };
   const hs = { variant: "balanced", topN: 4, start: null };
+  // 자유도 변형: 공격자산과 "편입될 때 담을 비중(%)"을 직접 정함 — 브라우저에 저장
+  const MAX_CUSTOM = 8;
+  let custom = { tickers: [...OFFENSIVE], weights: Object.fromEntries(OFFENSIVE.map(t => [t, 25])) };
+  try {
+    const sv = JSON.parse(localStorage.getItem("haaCustom") || "null");
+    if (sv && Array.isArray(sv.tickers)) custom = { tickers: sv.tickers.filter(t => TK[t]).slice(0, MAX_CUSTOM), weights: sv.weights || {} };
+  } catch (e) {}
+  const saveCustom = () => { try { localStorage.setItem("haaCustom", JSON.stringify(custom)); } catch (e) {} };
+  const cw = t => Math.max(0, +(custom.weights[t] ?? 0)) / 100;
   // 변형: 카나리아·현금 규칙은 같고 공격자산 목록과 고르는 수만 다름 (backtest/haa_signal.py VARIANTS와 같게 유지)
   const VARIANTS = {
     balanced:   { label: "HAA-Balanced", short: "Balanced", off: OFFENSIVE, n: () => hs.topN, desc: "SPY·IWM·VEA·VWO·VNQ·DBC·IEF·TLT 중 상위 자산을 같은 비중으로." },
     simpleSpy:  { label: "HAA-Simple (SPY)", short: "S-SPY", off: ["SPY"], n: () => 1, desc: "공격 모드에서 SPY 하나만 보유 (모멘텀이 음수면 현금자산)." },
     simpleQqq:  { label: "HAA-Simple (QQQ)", short: "S-QQQ", off: ["QQQ"], n: () => 1, desc: "공격 모드에서 QQQ(나스닥100) 하나만 보유 (모멘텀이 음수면 현금자산)." },
     simpleBest: { label: "HAA-Simple (SPY·QQQ 중 큰 쪽)", short: "S-큰쪽", off: ["SPY", "QQQ"], n: () => 1, desc: "공격 모드에서 매달 SPY와 QQQ 중 모멘텀이 큰 쪽 100% (둘 다 음수면 현금자산)." },
+    custom:     { label: "HAA-자유도", short: "자유도", off: () => custom.tickers, n: () => hs.topN, custom: true,
+                  desc: "직접 고른 종목 중 모멘텀 상위 N개를 각자 정한 비중으로 (음수·미편입 몫과 남는 비중은 현금자산)." },
   };
+  const FIXED = Object.keys(VARIANTS).filter(k => !VARIANTS[k].custom);
+  const varLabel = k => k === "balanced" ? `HAA-Balanced (상위 ${hs.topN})` : (k === "custom" ? `HAA-자유도 (상위 ${hs.topN})` : VARIANTS[k].label);
   const BH = [{ t: "SPY", short: "SPY", label: "SPY 단순 보유" }, { t: "QQQ", short: "QQQ", label: "QQQ 단순 보유" }];
 
   const fmtM = ym => ym.slice(0, 4) + "." + ym.slice(4, 6);
@@ -1968,6 +2000,7 @@ function initHaa(DATA){
   const cls = v => v == null ? "" : (v >= 0 ? "ret-up" : "ret-down");
   const usd = n => "$" + Math.round(n).toLocaleString("en-US");
   const START_AMT = 10000;
+  const pctW = w => { const v = w * 100; return (Math.abs(v - Math.round(v)) < 0.05 ? Math.round(v) : v.toFixed(1)) + "%"; };
   const US_NAME = t => t;
 
   function lbRet(t, i, lb){
@@ -1979,7 +2012,7 @@ function initHaa(DATA){
     const r = LOOKBACKS.map(lb => lbRet(t, i, lb));
     return r.some(x => x == null) ? null : r.reduce((a, b) => a + b, 0) / r.length;
   }
-  function offensiveSet(v = hs.variant){ return VARIANTS[v].off; }
+  function offensiveSet(v = hs.variant){ const o = VARIANTS[v].off; return typeof o === "function" ? o() : o; }
   function topN(v = hs.variant){ return VARIANTS[v].n(); }
 
   // i번째 월말 기준 신호 → 다음 달 보유 비중
@@ -1995,6 +2028,15 @@ function initHaa(DATA){
     if (canary != null && canary > 0){
       mode = "offensive";
       ranked = off.filter(t => mom[t] != null).sort((a, b) => mom[b] - mom[a]);
+      if (VARIANTS[v].custom){
+        // 자유도: 상위 N개를 입력 비중 그대로 (합이 100% 넘으면 축소), 나머지는 현금자산
+        const top = ranked.slice(0, n);
+        const tot = top.reduce((a, t) => a + cw(t), 0), scale = tot > 1 ? 1 / tot : 1;
+        top.forEach(t => { const tgt = mom[t] > 0 ? t : cash; weights[tgt] = (weights[tgt] || 0) + cw(t) * scale; });
+        const rest = 1 - Object.values(weights).reduce((a, b) => a + b, 0);
+        if (rest > 1e-9) weights[cash] = (weights[cash] || 0) + rest;
+        Object.keys(weights).forEach(t => { if (weights[t] < 1e-9) delete weights[t]; });
+      } else
       ranked.slice(0, n).forEach(t => { const tgt = mom[t] > 0 ? t : cash; weights[tgt] = (weights[tgt] || 0) + 1 / n; });
     } else {
       mode = "defensive";
@@ -2003,9 +2045,9 @@ function initHaa(DATA){
     }
     return { mode, weights, mom, canary, cash, ranked };
   }
-  // 변형끼리 공정하게 비교하도록 시작 가능 월은 4개 변형 공통(모든 변형의 자산에 12개월 모멘텀이 있는 달)
+  // 변형끼리 공정하게 비교하도록 시작 가능 월은 고정 4개 변형 공통(자유도 종목은 제외 — 데이터 없는 달엔 후보에서 빠지고 그 몫은 현금자산)
   function firstValid(){
-    const need = [...new Set([...Object.values(VARIANTS).flatMap(x => x.off), ...CASH, CANARY])];
+    const need = [...new Set([...FIXED.flatMap(k => VARIANTS[k].off), ...CASH, CANARY])];
     for (let i = 0; i < MONTHS.length; i++) if (need.every(t => momentum(t, i) != null)) return i;
     return MONTHS.length - 1;
   }
@@ -2055,7 +2097,7 @@ function initHaa(DATA){
     const hold = Object.entries(sig.weights).sort((a, b) => b[1] - a[1]);
     document.getElementById("haaHold").innerHTML = hold.map(([t, w]) => `
       <div class="haa-hold-row"><div><span class="tk">${t}</span> <span class="nm">${NAMES[t] || TK[t].n}</span></div>
-      <div class="haa-hold-bar"><span style="width:${(w * 100).toFixed(0)}%"></span></div><div class="w">${(w * 100).toFixed(0)}%</div></div>`).join("");
+      <div class="haa-hold-bar"><span style="width:${(w * 100).toFixed(0)}%"></span></div><div class="w">${pctW(w)}</div></div>`).join("");
     const lbCells = t => LOOKBACKS.map(lb => { const v = lbRet(t, i, lb); return `<td class="num ${cls(v)}">${pctS(v == null ? null : v * 100)}</td>`; }).join("");
     const momCell = t => `<td class="num ${cls(sig.mom[t])}" style="font-weight:700;">${pctS(sig.mom[t] == null ? null : sig.mom[t] * 100, 2)}</td>`;
     document.getElementById("haaCanaryBody").innerHTML =
@@ -2064,9 +2106,9 @@ function initHaa(DATA){
     const n = topN();
     document.getElementById("haaRankBody").innerHTML = sig.ranked.map((t, k) => {
       let tag = "";
-      if (sig.mode === "offensive" && k < n) tag = sig.mom[t] > 0 ? `<span class="tag eligible">편입 ${(100 / n).toFixed(0)}%</span>` : `<span class="tag safe">음수 → ${sig.cash}로 대체</span>`;
+      if (sig.mode === "offensive" && k < n) tag = sig.mom[t] > 0 ? `<span class="tag eligible">편입 ${pctW(sig.weights[t])}</span>` : `<span class="tag safe">음수 → ${sig.cash}로 대체</span>`;
       else if (sig.mode === "defensive" && k < n) tag = `<span class="tag">방어 모드라 제외</span>`;
-      return `<tr><td class="rank-num">${k + 1}</td><td><strong>${t}</strong> <span class="nm">${NAMES[t]}</span></td>${lbCells(t)}${momCell(t)}<td>${tag}</td></tr>`;
+      return `<tr><td class="rank-num">${k + 1}</td><td><strong>${t}</strong> <span class="nm">${NAMES[t] || TK[t].n}</span></td>${lbCells(t)}${momCell(t)}<td>${tag}</td></tr>`;
     }).join("");
   }
 
@@ -2135,11 +2177,13 @@ function initHaa(DATA){
   }
 
   // ---------- 화면 ----------
-  const holdText = w => Object.entries(w).sort((a, b) => b[1] - a[1]).map(([t, x]) => `${t} ${(x * 100).toFixed(0)}%`).join(", ");
+  const holdText = w => Object.entries(w).sort((a, b) => b[1] - a[1]).map(([t, x]) => `${t} ${pctW(x)}`).join(", ");
   function render(){
     document.querySelectorAll("[data-haa]").forEach(g => g.querySelectorAll("button").forEach(b =>
       b.classList.toggle("active", String(hs[g.dataset.haa]) === b.dataset.value)));
-    document.getElementById("haaTopGroup").hidden = hs.variant !== "balanced";
+    document.getElementById("haaTopGroup").hidden = !(hs.variant === "balanced" || hs.variant === "custom");
+    document.getElementById("haaCustomBox").hidden = hs.variant !== "custom";
+    if (hs.variant === "custom") renderCustom();
     document.getElementById("haaVariantHint").textContent = VARIANTS[hs.variant].desc;
     const first = firstValid();
     const sel = document.getElementById("haaStart");
@@ -2158,7 +2202,7 @@ function initHaa(DATA){
       <div class="stat-tile"><span class="label">최대낙폭(MDD)</span><span class="value">${sH.mdd.toFixed(1)}%</span><span class="sub">SPY ${sS.mdd.toFixed(1)}% · 60/40 ${s64.mdd.toFixed(1)}%</span></div>
       <div class="stat-tile"><span class="label">샤프 비율</span><span class="value">${sH.sharpe.toFixed(2)}</span><span class="sub">SPY ${sS.sharpe.toFixed(2)} · 방어 모드 ${defRatio.toFixed(0)}% 기간</span></div>`;
     const series = [
-      { short: "HAA", label: hs.variant === "balanced" ? `HAA-Balanced (상위 ${hs.topN})` : VARIANTS[hs.variant].label, color: "var(--s1)", w: 2.6, v: res.nav, st: sH },
+      { short: "HAA", label: varLabel(hs.variant), color: "var(--s1)", w: 2.6, v: res.nav, st: sH },
       { short: "SPY", label: "SPY 단순 보유", color: "var(--s2)", w: 1.8, v: res.spy, st: sS },
       { short: "60/40", label: "60/40 (SPY·IEF)", color: "var(--ink-2)", w: 1.6, dash: "6,4", v: res.b6040, st: s64 },
     ];
@@ -2200,14 +2244,14 @@ function initHaa(DATA){
   // ---------- 변형 비교 ----------
   function renderVariantCompare(){
     const i = MONTHS.length - 1;
-    const VCOLORS = ["var(--s1)", "var(--s2)", "var(--s3)", "var(--s4)"];
+    const VCOLORS = ["var(--s1)", "var(--s2)", "var(--s3)", "var(--s4)", "var(--s5)"];
     const keys = Object.keys(VARIANTS);
     const runs = keys.map(k => ({ k, res: run(k) }));
     const s = runs[0].res.s, e = runs[0].res.e;
     const series = runs.map(({ k, res }, j) => {
       const st = stats(res.nav, s);
       st.def = res.log.filter(l => l.mode === "defensive").length / res.log.length * 100;
-      return { k, short: VARIANTS[k].short, label: k === "balanced" ? `HAA-Balanced (상위 ${hs.topN})` : VARIANTS[k].label,
+      return { k, short: VARIANTS[k].short, label: varLabel(k),
                color: VCOLORS[j], w: k === hs.variant ? 2.8 : 1.8, v: res.nav, st, res };
     });
     const bh = BH.map((b, j) => {
@@ -2244,6 +2288,54 @@ function initHaa(DATA){
     document.getElementById("haaCmpNote").textContent =
       `${VARIANTS.simpleBest.label}: 전체 ${best.length}개월 중 ${US_NAME(a)} ${cnt(a)}개월 · ${US_NAME(b)} ${cnt(b)}개월 · 현금자산 ${cashN}개월 보유.`;
   }
+  // ---------- 자유도 종목·비중 입력 ----------
+  const SW = ["var(--s1)","var(--s2)","var(--s3)","var(--s4)","var(--s5)","var(--s6)","var(--s7)","var(--s8)"];
+  const escH = x => String(x).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const cInput = document.getElementById("haaTickerInput"), cMsg = document.getElementById("haaEntryMsg");
+  function resolveT(q){
+    q = q.trim();
+    if (!q) return null;
+    const head = q.split(/\s|—/)[0].toUpperCase().replace(".", "-");
+    if (TK[head]) return head;
+    const lower = q.toLowerCase();
+    return Object.keys(TK).find(t => TK[t].n.toLowerCase().startsWith(lower)) || Object.keys(TK).find(t => TK[t].n.toLowerCase().includes(lower)) || null;
+  }
+  function renderCustom(){
+    const box = document.getElementById("haaChips");
+    box.innerHTML = custom.tickers.length ? custom.tickers.map((t, j) => `<span class="chip">
+        <span class="sw" style="background:${SW[j]}"></span><span class="tk">${t}</span><span class="nm" title="${escH(TK[t].n)}">${escH(NAMES[t] || TK[t].n)}</span>
+        <input type="number" min="0" max="100" step="5" value="${+(+(custom.weights[t] ?? 0)).toFixed(1)}" data-hw="${t}" aria-label="${t} 편입 비중(%)">%
+        <button type="button" class="x" data-hrm="${t}" aria-label="${t} 빼기">✕</button></span>`).join("")
+      : `<span class="chips-empty">종목을 추가하세요. 종목이 없으면 공격 모드에서도 전부 현금자산입니다.</span>`;
+    const ws = custom.tickers.map(t => Math.max(0, +(custom.weights[t] ?? 0))).sort((a, b) => a - b);
+    const sum = ws.reduce((a, b) => a + b, 0);
+    const n = Math.min(hs.topN, ws.length);
+    const lo = Math.min(100, ws.slice(0, n).reduce((a, b) => a + b, 0)), hi = Math.min(100, ws.slice(ws.length - n).reduce((a, b) => a + b, 0));
+    const rng = !n ? "0%" : (Math.abs(lo - hi) < 0.05 ? `${hi.toFixed(0)}%` : `${lo.toFixed(0)}~${hi.toFixed(0)}%`);
+    document.getElementById("haaWeightHint").textContent =
+      `${custom.tickers.length}개 비중 합계 ${sum.toFixed(1)}% · 편입 수 ${hs.topN}이면 공격 모드에서 종목에 투자되는 비중 최대 ${rng} (남는 몫과 모멘텀 음수 종목 몫은 현금자산). 편입된 종목 비중 합이 100%를 넘는 달은 100%로 비율 축소.`;
+    box.querySelectorAll("[data-hrm]").forEach(b => b.addEventListener("click", () => {
+      custom.tickers = custom.tickers.filter(t => t !== b.dataset.hrm); delete custom.weights[b.dataset.hrm]; saveCustom(); render();
+    }));
+    box.querySelectorAll("[data-hw]").forEach(inp => inp.addEventListener("change", () => {
+      custom.weights[inp.dataset.hw] = Math.max(0, Math.min(100, parseFloat(inp.value) || 0)); saveCustom(); render();
+    }));
+  }
+  function addCustom(){
+    const t = resolveT(cInput.value);
+    if (!t){ cMsg.textContent = `"${cInput.value.trim()}"은(는) 데이터에 없는 종목입니다. 추가를 원하면 Claude에게 요청하세요.`; return; }
+    if (custom.tickers.includes(t)){ cMsg.textContent = t + "는 이미 선택돼 있습니다."; cInput.value = ""; return; }
+    if (custom.tickers.length >= MAX_CUSTOM){ cMsg.textContent = "최대 " + MAX_CUSTOM + "개까지 고를 수 있습니다."; return; }
+    custom.tickers.push(t); custom.weights[t] = +(100 / hs.topN).toFixed(1); cMsg.textContent = ""; cInput.value = "";
+    saveCustom(); render();
+  }
+  document.getElementById("haaTickerAdd").addEventListener("click", addCustom);
+  cInput.addEventListener("keydown", e => { if (e.key === "Enter"){ e.preventDefault(); addCustom(); } });
+  document.getElementById("haaTickerClear").addEventListener("click", () => { custom = { tickers: [], weights: {} }; saveCustom(); render(); });
+  document.getElementById("haaEqual").addEventListener("click", () => {
+    custom.tickers.forEach(t => custom.weights[t] = +(100 / hs.topN).toFixed(2)); saveCustom(); render();
+  });
+
   document.querySelectorAll("[data-haa]").forEach(g => g.querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
     const key = g.dataset.haa;
     hs[key] = key === "topN" ? parseInt(b.dataset.value, 10) : b.dataset.value;
