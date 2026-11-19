@@ -171,6 +171,21 @@ select{
 .holding-mode.offensive{background:var(--accent-soft);color:var(--accent);}
 .holding-mode.defensive{background:rgba(160,100,0,0.14);color:var(--warning);}
 .holding-mode .dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
+.canary-panel h2 .canary-tk{font-family:var(--font-mono);font-size:13px;color:var(--muted);font-weight:600;margin-left:4px;}
+.canary-panel .holding-mode{margin-bottom:0;}
+.canary-tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:12px 0 14px;}
+.canary-tile{border:1px solid var(--border);border-radius:10px;padding:12px 14px;background:var(--surface-2);display:flex;flex-direction:column;gap:4px;min-width:0;}
+.canary-tile .label{font-size:12px;color:var(--muted);font-weight:600;}
+.canary-tile .value{font-family:var(--font-mono);font-size:22px;font-weight:600;font-variant-numeric:tabular-nums;}
+.canary-tile .parts{font-family:var(--font-mono);font-size:13px;font-variant-numeric:tabular-nums;line-height:1.6;}
+.canary-tile .sub{font-size:11.5px;color:var(--ink-2);}
+#canaryChart{width:100%;height:220px;display:block;touch-action:pan-y;}
+.canary-legend{display:flex;flex-wrap:wrap;gap:14px;font-size:11.5px;color:var(--muted);margin-top:6px;}
+.canary-legend i{display:inline-block;vertical-align:middle;margin-right:6px;}
+.canary-legend .ln{width:16px;height:2px;background:var(--cat-1);}
+.canary-legend .dt{width:8px;height:8px;border-radius:50%;background:var(--surface);border:2px solid var(--cat-1);}
+.canary-legend .zr{width:16px;border-top:1.5px dashed var(--muted);}
+@media (max-width:640px){ .canary-tiles{grid-template-columns:1fr;} }
 .holding-list{display:flex;flex-direction:column;gap:10px;}
 .sector-block{border:1px solid var(--border);border-radius:10px;padding:10px 12px;background:var(--surface-2);}
 .sector-block .sector-name{font-size:12px;font-weight:700;color:var(--accent);margin-bottom:8px;text-transform:uppercase;letter-spacing:.03em;}
@@ -318,6 +333,21 @@ td.mono, th.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;
       <p>Finviz의 섹터 분류와 시가총액으로, 미국에 상장된 주식 전체(<span id="fvStockCount">–</span>종목)가 섹터별로 얼마나 오르고 내렸는지, 그 결과 전체 시가총액에서 각 섹터가 차지하는 비중이 얼마나 늘고 줄었는지 보여줍니다. 섹터나 표의 칸을 누르면 그 섹터의 시가총액 상위 5종목이 뜹니다.</p>
     </header>
 
+    <section class="panel canary-panel" id="canaryPanel" aria-label="HAA 카나리아 모멘텀" hidden>
+      <div class="chart-header">
+        <h2>HAA 카나리아 모멘텀 <span class="canary-tk">TIP</span></h2>
+        <span class="holding-mode" id="canaryBadge"></span>
+      </div>
+      <p class="panel-sub" id="canarySub"></p>
+      <div class="canary-tiles">
+        <div class="canary-tile"><span class="label">오늘</span><span class="value" id="canaryNow">–</span><span class="sub" id="canaryNowSub">–</span></div>
+        <div class="canary-tile"><span class="label">기간별 수익률</span><span class="parts" id="canaryParts">–</span><span class="sub">모멘텀 = 네 값의 평균</span></div>
+        <div class="canary-tile"><span class="label">이번 달 HAA 신호 기준</span><span class="value" id="canaryMonth">–</span><span class="sub" id="canaryMonthSub">–</span></div>
+      </div>
+      <svg id="canaryChart" viewBox="0 0 960 220" preserveAspectRatio="none" role="img" aria-label="최근 1년 카나리아 모멘텀 일별 추이"></svg>
+      <div class="canary-legend"><span><i class="ln"></i>일별 모멘텀</span><span><i class="dt"></i>월말 (HAA 신호가 정해지는 날)</span><span><i class="zr"></i>0% (위 = 공격, 아래 = 방어)</span></div>
+    </section>
+
     <section class="panel controls" aria-label="기간 설정">
       <div class="control-row">
         <div class="control-group" style="flex-basis:520px;">
@@ -385,6 +415,7 @@ td.mono, th.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;
         <li><strong>비중 = 섹터 시가총액 ÷ 11개 섹터 시가총액 합계.</strong> 기간 시작 시점의 시가총액은 "현재 시가총액 ÷ (1 + 기간 성과)"로 역산했습니다. Finviz는 유통주식이 아니라 <strong>전체 발행주식 기준 시가총액</strong>을 쓰기 때문에, 유통주식이 적은 SpaceX 같은 종목은 S&amp;P·MSCI 지수보다 비중이 크게 잡힙니다.</li>
         <li><strong>중복 보정:</strong> Finviz는 GOOGL/GOOG, BRK-A/BRK-B처럼 주식 클래스가 여러 개인 회사에 클래스마다 회사 전체 시가총액을 붙여서 섹터 합계가 부풀려집니다. 섹터별 상위 20종목 안의 중복 클래스는 합계에서 빼서 보정했습니다 (<span id="fvDupNote"></span>). 그보다 작은 회사의 중복은 보정하지 않았습니다.</li>
         <li><strong>기간 중 새로 상장한 종목은 시작 비중 역산에 그대로 섞여 있습니다.</strong> 예를 들어 2026년 6월 상장한 SpaceX(SPCX, 산업재)는 6개월·1년 비교에서 "그때도 있었던 것처럼" 계산되므로, 상장 효과로 늘어난 산업재 비중은 비중 증감에 드러나지 않습니다. 팝업에서 상장 전 기간의 등락률은 "–"로 표시됩니다.</li>
+        <li><strong>HAA 카나리아 모멘텀:</strong> Yahoo Finance TIP 일봉(배당 반영 종가)으로 매일 1·3·6·12개월 수익률 평균을 계산합니다. k개월 전 가격은 그 날짜 이전 마지막 거래일 종가입니다. 미국 백테스터 HAA 탭·월간 알림은 월말 종가로 한 달에 한 번 정해지므로, 매일 값은 다음 신호의 방향을 미리 보는 참고용입니다.</li>
         <li><strong>매일 자동 업데이트:</strong> 화~토 06:30(한국 시간)에 Finviz에서 전날 미국 장 마감 데이터를 받아 이 페이지와 ntfy 알림을 함께 갱신합니다. 미국 휴장일에는 갱신하지 않습니다.</li>
       </ul>
     </footer>
@@ -529,6 +560,88 @@ function renderWeightBars(p){
       ["전체 등락률", fmtPct(marketRet(p))],
     ]),
     r => openSectorPopup(r, p));
+}
+
+// ---------- HAA 카나리아 모멘텀 (TIP, 일별) ----------
+function renderCanary(c){
+  if (!c || !c.series || c.series.length < 2) return;
+  document.getElementById("canaryPanel").hidden = false;
+  const on = v => v > 0;
+  const signed = (v, d = 2) => (v >= 0 ? "+" : "") + v.toFixed(d) + "%";
+  const col = v => v >= 0 ? "var(--up)" : "var(--down)";
+  const badge = document.getElementById("canaryBadge");
+  badge.className = "holding-mode " + (on(c.value) ? "offensive" : "defensive");
+  badge.innerHTML = `<span class="dot"></span>오늘 기준 ${on(c.value) ? "공격" : "방어"}`;
+  document.getElementById("canarySub").textContent =
+    `HAA는 물가연동국채 ETF(TIP)의 모멘텀(1·3·6·12개월 수익률 평균)이 0보다 크면 공격, 0 이하면 방어(현금성 자산)로 갑니다. ` +
+    `실제 신호는 월말 종가로 한 달에 한 번 정해지고, 여기서는 같은 공식을 "오늘이 월말이라면"으로 매일 계산해 다음 신호의 방향을 미리 봅니다. ${fmtDate(c.asOf)} 종가 기준` + (c.stale ? " (이번엔 새 값을 받지 못해 이전 값)" : "") + ".";
+  const now = document.getElementById("canaryNow");
+  now.textContent = signed(c.value); now.style.color = col(c.value);
+  const dd = c.value - c.prev;
+  document.getElementById("canaryNowSub").textContent = `전일 ${signed(c.prev)} → ${dd >= 0 ? "+" : ""}${dd.toFixed(2)}%p`;
+  document.getElementById("canaryParts").innerHTML = ["1", "3", "6", "12"].map(k =>
+    `<span style="color:var(--muted)">${k}M</span> <span style="color:${col(c.parts[k])}">${signed(c.parts[k], 1)}</span>`).join(" · ");
+  const me = document.getElementById("canaryMonth");
+  me.textContent = signed(c.monthEnd.value); me.style.color = col(c.monthEnd.value);
+  const mNext = parseInt(c.monthEnd.date.slice(5, 7), 10) % 12 + 1;
+  document.getElementById("canaryMonthSub").textContent =
+    `${fmtDate(c.monthEnd.date)} 월말 확정 → ${mNext}월 HAA ${on(c.monthEnd.value) ? "공격" : "방어"}`;
+
+  // 차트
+  const svg = document.getElementById("canaryChart"), ns = "http://www.w3.org/2000/svg";
+  const W = Math.max(320, svg.clientWidth || 960), H = 220, P = { t: 12, r: 12, b: 24, l: 46 };
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.innerHTML = "";
+  const S = c.series, n = S.length, vals = S.map(s => s[1]);
+  let lo = Math.min(0, ...vals), hi = Math.max(0, ...vals);
+  const pad = (hi - lo) * 0.08 || 0.5; lo -= pad; hi += pad;
+  const x = k => P.l + k / (n - 1) * (W - P.l - P.r);
+  const y = v => P.t + (1 - (v - lo) / (hi - lo)) * (H - P.t - P.b);
+  const mk = (tag, attrs) => { const e = document.createElementNS(ns, tag); for (const a in attrs) e.setAttribute(a, attrs[a]); svg.appendChild(e); return e; };
+  // 눈금
+  const range = hi - lo, step = range > 8 ? 2 : (range > 4 ? 1 : 0.5);
+  for (let v = Math.ceil(lo / step) * step; v <= hi; v += step){
+    const zero = Math.abs(v) < 1e-9;
+    mk("line", { x1: P.l, x2: W - P.r, y1: y(v), y2: y(v), stroke: zero ? "var(--muted)" : "var(--border)", "stroke-width": zero ? 1.5 : 1, "stroke-dasharray": zero ? "5,4" : "" });
+    mk("text", { x: P.l - 6, y: y(v) + 3.5, "text-anchor": "end", "font-size": 10.5, fill: "var(--muted)", "font-family": "var(--font-mono)" }).textContent = (v > 0 ? "+" : "") + (+v.toFixed(1)) + "%";
+  }
+  // 월 라벨 + 월말 표시 (다음 날이 다른 달이면 월말)
+  const monthEnds = [];
+  S.forEach((s, k) => { if (k < n - 1 && S[k + 1][0].slice(0, 7) !== s[0].slice(0, 7)) monthEnds.push(k); });
+  monthEnds.forEach((k, j) => { if (j % (W < 600 ? 3 : 2) === 0 && k + 1 < n)
+    mk("text", { x: x(k + 1), y: H - 6, "text-anchor": "middle", "font-size": 10.5, fill: "var(--muted)", "font-family": "var(--font-mono)" })
+      .textContent = S[k + 1][0].slice(2, 4) + "." + S[k + 1][0].slice(5, 7); });
+  // 0 위/아래 영역 색
+  const area = (sign) => {
+    const clip = sign > 0 ? `M${P.l},${P.t}H${W - P.r}V${y(0)}H${P.l}Z` : `M${P.l},${y(0)}H${W - P.r}V${H - P.b}H${P.l}Z`;
+    const id = "cc" + (sign > 0 ? "p" : "n");
+    const defs = svg.querySelector("defs") || mk("defs", {});
+    const cp = document.createElementNS(ns, "clipPath"); cp.id = id;
+    const pth = document.createElementNS(ns, "path"); pth.setAttribute("d", clip); cp.appendChild(pth); defs.appendChild(cp);
+    mk("path", { d: `M${x(0)},${y(0)}` + S.map((s, k) => `L${x(k).toFixed(1)},${y(s[1]).toFixed(1)}`).join("") + `L${x(n - 1)},${y(0)}Z`,
+                 fill: sign > 0 ? "var(--up)" : "var(--down)", "fill-opacity": 0.12, "clip-path": `url(#${id})` });
+  };
+  area(1); area(-1);
+  mk("polyline", { points: S.map((s, k) => `${x(k).toFixed(1)},${y(s[1]).toFixed(1)}`).join(" "), fill: "none", stroke: "var(--cat-1)", "stroke-width": 2, "stroke-linejoin": "round" });
+  monthEnds.forEach(k => mk("circle", { cx: x(k), cy: y(S[k][1]), r: 3.2, fill: "var(--surface)", stroke: "var(--cat-1)", "stroke-width": 1.8 }));
+  mk("circle", { cx: x(n - 1), cy: y(S[n - 1][1]), r: 4.5, fill: "var(--cat-1)", stroke: "var(--surface)", "stroke-width": 1.5 });
+  // 호버
+  const vl = mk("line", { y1: P.t, y2: H - P.b, stroke: "var(--muted)", "stroke-width": 1, "stroke-dasharray": "3,3", visibility: "hidden" });
+  const hd = mk("circle", { r: 5, fill: "none", stroke: "var(--ink)", "stroke-width": 1.5, visibility: "hidden" });
+  const isME = new Set(monthEnds);
+  function move(evt){
+    const rect = svg.getBoundingClientRect(), pt = evt.touches ? evt.touches[0] : evt;
+    const k = Math.max(0, Math.min(n - 1, Math.round(((pt.clientX - rect.left) / rect.width * W - P.l) / (W - P.l - P.r) * (n - 1))));
+    vl.setAttribute("x1", x(k)); vl.setAttribute("x2", x(k)); vl.setAttribute("visibility", "visible");
+    hd.setAttribute("cx", x(k)); hd.setAttribute("cy", y(S[k][1])); hd.setAttribute("visibility", "visible");
+    showTip(evt, tipRows(fmtDate(S[k][0]) + (isME.has(k) ? " · 월말" : ""), [
+      ["모멘텀", signed(S[k][1])],
+      ["판정", S[k][1] > 0 ? "공격" : "방어"],
+    ]));
+  }
+  function leave(){ vl.setAttribute("visibility", "hidden"); hd.setAttribute("visibility", "hidden"); hideTip(); }
+  svg.addEventListener("mousemove", move); svg.addEventListener("mouseleave", leave);
+  svg.addEventListener("touchmove", move, { passive: true }); svg.addEventListener("touchend", leave);
 }
 
 function renderSparks(p){
@@ -733,6 +846,7 @@ function initDaily(){
 
 initDaily();
 renderDaily();
+renderCanary(FV_DATA.canary);
 document.getElementById("updatedAt").textContent = "마지막 업데이트: " + FV_DATA.fetchedAt + " 수집";
 const fx = FV_DATA.fx;
 if (fx && fx.rate && fx.avg3y) {
