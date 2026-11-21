@@ -105,6 +105,7 @@ button{font-family:inherit;}
   border-radius:999px;padding:6px 12px;background:var(--surface);width:fit-content;
 }
 .crosslink:hover{background:var(--surface-2);}
+.links{display:flex;flex-wrap:wrap;gap:8px;}
 
 .eyebrow{font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--accent);}
 .hero h1{font-size:clamp(24px,4vw,32px);font-weight:700;margin-top:6px;}
@@ -405,7 +406,10 @@ td.mono, th.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;
       <button type="button" role="tab" data-tab="haa" aria-selected="false">HAA 자산배분</button>
       <a href="../sector/">섹터 데일리</a>
     </div>
-    <a class="crosslink" href="../kr/">🇰🇷 한국 ETF 백테스터 (모멘텀 로테이션·HAA 한국 계좌) →</a>
+    <div class="links">
+      <a class="crosslink" href="../kr/">한국 백테스터 →</a>
+      <a class="crosslink" href="../dividend/">배당주 스크리너 →</a>
+    </div>
   </div>
   <div class="updated" id="updatedAt">데이터 불러오는 중…</div>
   <div class="tab-pane" id="pane-rotation">
