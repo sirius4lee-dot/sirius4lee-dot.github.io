@@ -146,6 +146,7 @@ dialog::backdrop{background:rgba(10,13,19,0.5);}
 .chart-wrap{position:relative;}
 .chart-wrap svg{width:100%;height:200px;display:block;overflow:visible;touch-action:pan-y;}
 .tt{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--border-strong);border-radius:8px;padding:6px 9px;font-size:11.5px;font-family:var(--font-mono);box-shadow:var(--shadow);white-space:nowrap;transform:translate(-50%,-120%);display:none;z-index:3;}
+.ex-note{grid-column:1/-1;margin:2px 0 0;font-size:11.5px;color:var(--muted);line-height:1.55;}
 .dlg-links{font-size:12px;display:flex;gap:14px;flex-wrap:wrap;}
 </style>
 </head>
@@ -181,6 +182,7 @@ dialog::backdrop{background:rgba(10,13,19,0.5);}
       <label class="f-item" id="fYearsWrap"><span id="fYearsLabel">최소 연속 배당 연수</span><input type="number" id="fYears" step="1" min="0" value="0"></label>
       <label class="f-item">업종<select id="fSec"><option value="">전체</option></select></label>
       <label class="f-item" id="fMktWrap">시장<select id="fMkt"><option value="">전체</option><option>KOSPI</option><option>KOSDAQ</option></select></label>
+      <label class="f-item" id="fExWrap">배당락 일정<select id="fEx"><option value="">전체</option><option value="7">7일 이내</option><option value="14">14일 이내</option><option value="30">30일 이내</option><option value="60">60일 이내</option></select></label>
       <label class="f-item">종목 검색<input type="search" id="fQ" placeholder="이름 또는 코드"></label>
       <label class="check"><input type="checkbox" id="fTrap" checked>배당 함정 의심 종목 빼기</label>
       <button class="btn" type="button" id="resetBtn">기본값으로</button>
@@ -205,6 +207,7 @@ dialog::backdrop{background:rgba(10,13,19,0.5);}
       <p><b>배당성향</b> = 배당금 ÷ 주당순이익(EPS). 30~60%가 무난하고, 100%를 넘으면 버는 것보다 많이 나눠주는 것이라 배당 삭감 위험이 커요. 리츠(REIT)는 원래 이익 대부분을 배당해서 이 값이 높게 나와요. 미국은 현금흐름(FCF) 기준 배당성향도 함께 보여줘요.</p>
       <p><b>배당 성장</b> = 연간 배당금의 연평균 증가율(미국 5년, 한국 2년). 배당이 꾸준히 늘면 오래 들고 있을수록 매입가 대비 배당률이 커져요.</p>
       <p><b>연속 배당</b>: 미국은 배당을 줄이지 않고 유지·증액한 연속 연수(25년 이상이면 '배당 귀족'급), 한국은 최근 3년 실적 중 배당한 해 수예요.</p>
+      <p><b>배당 주기·다음 배당락(미국)</b>: 과거 배당락일 기록으로 월·분기·반기·연 배당을 구분하고, 1년 전 같은 회차 날짜로 다음 배당락일을 추정해요. 배당락 <b>전 거래일까지</b> 사야 그 배당을 받아요. 다만 배당락일엔 주가가 배당만큼 빠지므로 "배당 직전 매수 → 직후 매도"로는 수익이 나지 않아요. 어차피 살 종목의 매수 시점, 현금 들어오는 달을 맞출 때 참고하세요.</p>
       <p><b>ROE·부채비율·PER·PBR</b>: ROE가 높으면 이익을 잘 내는 회사, PER·PBR이 낮으면 이익·자산 대비 주가가 싸요. 은행·보험은 원래 부채비율이 매우 높게 나와요.</p>
       <p><b>배당 함정 의심</b>: 최근 감배, 적자인데 배당, 이익보다 많은 배당(배당성향 100% 초과), 배당수익률이 평균의 1.8배 이상으로 치솟은 경우(주가 급락), 한국 종목은 최근 배당이 전년의 1.8배를 넘는 경우(일회성 특별배당 의심)예요. 숫자는 좋아 보여도 다음 배당이 깎일 수 있어요.</p>
       <p><b>점수 기본값</b>: 배당수익률 30 · 평균 대비(저평가) 20 · 배당 성장 15 · 안정성(배당성향) 15 · 수익성(ROE) 10 · 연속 배당 10. 배당 미국 ETF SCHD 같은 지수도 수익률·성장·이익 체력·연속 배당을 함께 봐요.</p>
@@ -244,7 +247,13 @@ dialog::backdrop{background:rgba(10,13,19,0.5);}
     { k:"roe",    label:"수익성 (ROE)",      w:10, hint:"자기자본 대비 순이익" },
     { k:"streak", label:"연속 배당",        w:10, hint:"미국: 미삭감 연수, 한국: 최근 3년 중 배당 연수" },
   ];
-  const DEF_FILTER = { minY:2, maxPo:100, years:0, sec:"", mkt:"", q:"", trap:true };
+  const DEF_FILTER = { minY:2, maxPo:100, years:0, sec:"", mkt:"", ex:"", q:"", trap:true };
+  const FREQ = { 12:"월배당", 4:"분기", 2:"반기", 1:"연 1회" };
+  const TODAY = (() => { const d = new Date(); return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()); })();
+  const dayNum = s => s ? (Date.UTC(+s.slice(0,4), +s.slice(5,7) - 1, +s.slice(8,10)) - TODAY) / 864e5 : null;
+  const md = s => `${+s.slice(5,7)}/${+s.slice(8,10)}`;
+  const WD = "일월화수목금토";
+  const mdw = s => `${md(s)}(${WD[new Date(s + "T00:00:00Z").getUTCDay()]})`;
   let DATA = null, HIST = null, market = "kr", sortKey = "score", sortDir = -1, showN = 50, current = [];
   let weights = store.get("divWeights", Object.fromEntries(FACTORS.map(f => [f.k, f.w])));
   let filt = { ...DEF_FILTER, ...store.get("divFilter", {}) };
@@ -309,6 +318,8 @@ dialog::backdrop{background:rgba(10,13,19,0.5);}
       r.score = FACTORS.reduce((s, f) => s + (+weights[f.k] || 0) * r._f[f.k], 0) / wsum * 100;
       r.vs = r.avgY ? (r.y / r.avgY - 1) * 100 : null;
       r._trap = isTrap(r);
+      r.exDays = dayNum(r.nextEx);
+      r.nextY = r.nextAmt && r.p ? r.nextAmt / r.p * 100 : null;
     }
     return all;
   }
@@ -319,6 +330,7 @@ dialog::backdrop{background:rgba(10,13,19,0.5);}
       && (r.years || 0) >= (+filt.years || 0)
       && (!filt.sec || r.sec === filt.sec)
       && (market !== "kr" || !filt.mkt || r.m === filt.mkt)
+      && (market !== "us" || !filt.ex || (r.exDays != null && r.exDays >= 0 && r.exDays <= +filt.ex))
       && (!filt.trap || !r._trap)
       && (!q || r.n.toLowerCase().includes(q) || r.t.toLowerCase().includes(q)));
   }
@@ -331,6 +343,7 @@ dialog::backdrop{background:rgba(10,13,19,0.5);}
     { k:"y",      label:"배당수익률" },
     { k:"vs",     label:"평균 대비" },
     { k:"dps",    label:"주당배당금" },
+    ...(market === "us" ? [{ k:"freq", label:"주기" }, { k:"exDays", label:"다음 배당락(예상)" }] : []),
     { k:"p",      label:"주가" },
     { k:"payout", label:"배당성향" },
     ...(market === "us" ? [{ k:"fcfPayout", label:"FCF 배당성향" }] : []),
@@ -348,7 +361,7 @@ dialog::backdrop{background:rgba(10,13,19,0.5);}
       `<th class="${c.l ? "l" : ""} ${sortKey === c.k ? "sorted" : ""}" data-k="${c.k}" ${c.nosort ? "" : `aria-sort="${sortKey === c.k ? (sortDir < 0 ? "descending" : "ascending") : "none"}"`}>${c.label}${sortKey === c.k ? (sortDir < 0 ? " ▼" : " ▲") : ""}</th>`).join("");
     $("thead").querySelectorAll("th").forEach(th => th.addEventListener("click", () => {
       const k = th.dataset.k; if (k === "rank" || k === "flags") return;
-      if (sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = (k === "n" || k === "per" || k === "pbr" || k === "payout" || k === "fcfPayout" || k === "debt") ? 1 : -1; }
+      if (sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = (k === "n" || k === "per" || k === "pbr" || k === "payout" || k === "fcfPayout" || k === "debt" || k === "exDays") ? 1 : -1; }
       render();
     }));
   }
@@ -358,6 +371,12 @@ dialog::backdrop{background:rgba(10,13,19,0.5);}
     const d = r.y - base;
     if (Math.abs(d) < 0.005) return `<span class="chg muted">1주 0.00</span>`;
     return `<span class="chg ${d > 0 ? "up" : "down"}">1주 ${d > 0 ? "▲" : "▼"}${fmtN(Math.abs(d), 2)}%p</span>`;
+  }
+  function exCell(r){
+    if (r.exDays == null) return "–";
+    if (r.exDays < 0) return `<span class="muted">${md(r.nextEx)} 지남</span>`;
+    const soon = r.exDays <= 14;
+    return `<span class="${soon ? "y-main" : ""}">${md(r.nextEx)} <span class="${soon ? "up" : "muted"}">D-${r.exDays}</span></span><span class="chg muted">${dayNum(r.buyBy) < 0 ? "매수 마감 지남" : md(r.buyBy) + "까지 매수"} · 1회 ${pct(r.nextY)}</span>`;
   }
   const poFmt = v => v == null ? "–" : v === -1 ? `<span class="down">적자</span>` : `<span class="${v > 100 ? "up" : ""}">${fmtN(v, 0)}%</span>`;
   function render(){
@@ -382,6 +401,7 @@ dialog::backdrop{background:rgba(10,13,19,0.5);}
         <td><span class="y-main">${pct(r.y)}</span>${chgHtml(r)}</td>
         <td class="${r.vs == null ? "muted" : r.vs >= 0 ? "up" : "down"}">${r.vs == null ? "–" : (r.vs >= 0 ? "+" : "") + fmtN(r.vs, 0) + "%"}</td>
         <td>${dpsFmt(r.dps)}</td>
+        ${market === "us" ? `<td class="l">${FREQ[r.freq] || "–"}</td><td>${exCell(r)}</td>` : ""}
         <td>${price(r)}</td>
         <td>${poFmt(r.payout)}</td>
         ${market === "us" ? `<td>${poFmt(r.fcfPayout)}</td>` : ""}
@@ -393,7 +413,7 @@ dialog::backdrop{background:rgba(10,13,19,0.5);}
         <td>${r.debt == null ? "–" : fmtN(r.debt, 0) + "%"}</td>
         <td>${capFmt(r)}</td>
         <td class="l">${flags(r).map(([c, t]) => `<span class="tag ${c}">${t}</span>`).join("")}${r.stale ? `<span class="tag warn">어제 값</span>` : ""}</td>
-      </tr>`).join("") : `<tr><td class="l" colspan="17" style="padding:24px;color:var(--muted)">조건에 맞는 종목이 없어요. 조건을 완화해 보세요.</td></tr>`;
+      </tr>`).join("") : `<tr><td class="l" colspan="19" style="padding:24px;color:var(--muted)">조건에 맞는 종목이 없어요. 조건을 완화해 보세요.</td></tr>`;
     $("tbody").querySelectorAll("tr[data-t]").forEach(tr => {
       tr.addEventListener("click", () => openDetail(tr.dataset.t));
       tr.addEventListener("keydown", e => { if (e.key === "Enter") openDetail(tr.dataset.t); });
@@ -431,16 +451,17 @@ dialog::backdrop{background:rgba(10,13,19,0.5);}
     if (!secs.includes(filt.sec)) filt.sec = "";
     $("fSec").innerHTML = `<option value="">전체</option>` + secs.map(s => `<option ${s === filt.sec ? "selected" : ""}>${s}</option>`).join("");
     $("fMktWrap").hidden = market !== "kr";
+    $("fExWrap").hidden = market !== "us"; $("fEx").value = filt.ex || "";
     $("fYearsLabel").textContent = market === "us" ? "최소 연속 배당 연수" : "최소 배당 연수 (최근 3년 중)";
     $("fYears").max = market === "us" ? 70 : 3;
   }
   function bindFilters(){
     const upd = () => {
       filt = { minY:$("fMinY").value, maxPo:$("fMaxPo").value, years:$("fYears").value, sec:$("fSec").value,
-               mkt:$("fMkt").value, q:$("fQ").value, trap:$("fTrap").checked };
+               mkt:$("fMkt").value, ex:$("fEx").value, q:$("fQ").value, trap:$("fTrap").checked };
       store.set("divFilter", { ...filt, q:"" }); showN = 50; render();
     };
-    ["fMinY","fMaxPo","fYears","fSec","fMkt","fQ","fTrap"].forEach(id => $(id).addEventListener(id === "fQ" ? "input" : "change", upd));
+    ["fMinY","fMaxPo","fYears","fSec","fMkt","fEx","fQ","fTrap"].forEach(id => $(id).addEventListener(id === "fQ" ? "input" : "change", upd));
     $("resetBtn").addEventListener("click", () => {
       weights = Object.fromEntries(FACTORS.map(f => [f.k, f.w])); filt = { ...DEF_FILTER };
       store.set("divWeights", weights); store.set("divFilter", filt);
@@ -540,7 +561,11 @@ dialog::backdrop{background:rgba(10,13,19,0.5);}
     $("dlgKv").innerHTML = [
       ["배당수익률", pct(r.y)], ["과거 평균", pct(r.avgY)], ["평균 대비", r.vs == null ? "–" : (r.vs >= 0 ? "+" : "") + fmtN(r.vs, 0) + "%"], ["점수", r.score != null ? r.score.toFixed(0) : "–"],
       ["주당배당금", dpsFmt(r.dps)], ["주가", price(r)], ["배당성향", r.payout === -1 ? "적자" : pct(r.payout, 0)], [market === "us" ? "FCF 배당성향" : "배당 성장", market === "us" ? (r.fcfPayout === -1 ? "FCF 적자" : pct(r.fcfPayout, 0)) : pct(r.growth, 1)],
-    ].map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join("");
+      ...(market === "us" && r.nextEx ? [
+        ["배당 주기", FREQ[r.freq] || "–"], ["다음 배당락(예상)", mdw(r.nextEx) + (r.exDays >= 0 ? ` D-${r.exDays}` : " 지남")],
+        ["매수 마감(예상)", mdw(r.buyBy) + (dayNum(r.buyBy) < 0 ? " 지남" : "")], ["1회 배당", dpsFmt(r.nextAmt) + ` (${pct(r.nextY)})`]] : []),
+    ].map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join("")
+      + (market === "us" && r.nextEx ? `<p class="ex-note">배당락일은 1년 전 같은 회차 날짜로 추정한 값이라 실제와 며칠 다를 수 있어요(회사 공시가 기준). 배당락일 아침에는 주가가 보통 배당금만큼(미국 고배당주 실측 약 92%) 빠져서, 배당만 받고 바로 파는 단타는 세금·수수료를 빼면 손해예요.</p>` : "");
     $("histNote").textContent = market === "us" ? "정규 배당 기준(지급액 중앙값 × 연간 횟수), 파랑 = 전년보다 감소" : "회계연도 기준, 파랑 = 전년보다 감소";
     $("dlgLinks").innerHTML = market === "kr"
       ? `<a href="https://m.stock.naver.com/domestic/stock/${r.t}/total" target="_blank" rel="noopener">네이버 증권에서 보기 ↗</a>`
