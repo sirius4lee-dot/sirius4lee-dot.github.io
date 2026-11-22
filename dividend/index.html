@@ -96,6 +96,7 @@ input[type=range]{width:100%;accent-color:var(--accent);}
 .btn:hover{background:var(--surface-2);}
 
 .table-scroll{overflow-x:auto;border:1px solid var(--border);border-radius:10px;}
+.table-scroll.expanded{max-height:min(640px,70vh);overflow-y:auto;}
 table{border-collapse:collapse;width:100%;font-size:12.5px;min-width:1040px;}
 thead th{position:sticky;top:0;background:var(--surface-2);text-align:right;padding:9px 10px;font-size:11.5px;font-weight:600;color:var(--muted);border-bottom:1px solid var(--border-strong);white-space:nowrap;cursor:pointer;user-select:none;}
 thead th.l{text-align:left;}
@@ -178,7 +179,9 @@ dialog::backdrop{background:rgba(10,13,19,0.5);}
     <div class="weights" id="weights"></div>
     <div class="filters">
       <label class="f-item">최소 배당수익률 (%)<input type="number" id="fMinY" step="0.5" min="0" value="2"></label>
+      <label class="f-item">최소 배당성향 (%)<input type="number" id="fMinPo" step="10" min="0" placeholder="제한 없음"></label>
       <label class="f-item">최대 배당성향 (%)<input type="number" id="fMaxPo" step="10" min="0" value="100"></label>
+      <label class="f-item">최소 ROE (%)<input type="number" id="fMinRoe" step="1" placeholder="제한 없음"></label>
       <label class="f-item" id="fYearsWrap"><span id="fYearsLabel">최소 연속 배당 연수</span><input type="number" id="fYears" step="1" min="0" value="0"></label>
       <label class="f-item">업종<select id="fSec"><option value="">전체</option></select></label>
       <label class="f-item" id="fMktWrap">시장<select id="fMkt"><option value="">전체</option><option>KOSPI</option><option>KOSDAQ</option></select></label>
@@ -196,7 +199,7 @@ dialog::backdrop{background:rgba(10,13,19,0.5);}
       <thead><tr id="thead"></tr></thead>
       <tbody id="tbody"></tbody>
     </table></div>
-    <div class="more"><button class="btn" type="button" id="moreBtn">더 보기</button><span id="countNote"></span></div>
+    <div class="more"><button class="btn" type="button" id="moreBtn">더 보기 ▾</button><button class="btn" type="button" id="lessBtn">접기 ▴</button><span id="countNote"></span></div>
   </section>
 
   <section class="panel">
@@ -247,14 +250,15 @@ dialog::backdrop{background:rgba(10,13,19,0.5);}
     { k:"roe",    label:"수익성 (ROE)",      w:10, hint:"자기자본 대비 순이익" },
     { k:"streak", label:"연속 배당",        w:10, hint:"미국: 미삭감 연수, 한국: 최근 3년 중 배당 연수" },
   ];
-  const DEF_FILTER = { minY:2, maxPo:100, years:0, sec:"", mkt:"", ex:"", q:"", trap:true };
+  const DEF_FILTER = { minY:2, minPo:"", maxPo:100, minRoe:"", years:0, sec:"", mkt:"", ex:"", q:"", trap:true };
+  const PAGE = 10, STEP = 20;
   const FREQ = { 12:"월배당", 4:"분기", 2:"반기", 1:"연 1회" };
   const TODAY = (() => { const d = new Date(); return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()); })();
   const dayNum = s => s ? (Date.UTC(+s.slice(0,4), +s.slice(5,7) - 1, +s.slice(8,10)) - TODAY) / 864e5 : null;
   const md = s => `${+s.slice(5,7)}/${+s.slice(8,10)}`;
   const WD = "일월화수목금토";
   const mdw = s => `${md(s)}(${WD[new Date(s + "T00:00:00Z").getUTCDay()]})`;
-  let DATA = null, HIST = null, market = "kr", sortKey = "score", sortDir = -1, showN = 50, current = [];
+  let DATA = null, HIST = null, market = "kr", sortKey = "score", sortDir = -1, showN = PAGE, current = [];
   let weights = store.get("divWeights", Object.fromEntries(FACTORS.map(f => [f.k, f.w])));
   let filt = { ...DEF_FILTER, ...store.get("divFilter", {}) };
 
@@ -327,6 +331,8 @@ dialog::backdrop{background:rgba(10,13,19,0.5);}
     const q = filt.q.trim().toLowerCase();
     return all.filter(r => r.y >= (+filt.minY || 0)
       && (filt.maxPo === "" || r.payout == null || r.payout === -1 || r.payout <= +filt.maxPo || isReit(r))
+      && (filt.minPo === "" || filt.minPo == null || (r.payout != null && r.payout !== -1 && r.payout >= +filt.minPo))
+      && (filt.minRoe === "" || filt.minRoe == null || (r.roe != null && r.roe >= +filt.minRoe))
       && (r.years || 0) >= (+filt.years || 0)
       && (!filt.sec || r.sec === filt.sec)
       && (market !== "kr" || !filt.mkt || r.m === filt.mkt)
@@ -419,6 +425,9 @@ dialog::backdrop{background:rgba(10,13,19,0.5);}
       tr.addEventListener("keydown", e => { if (e.key === "Enter") openDetail(tr.dataset.t); });
     });
     $("moreBtn").hidden = rows.length <= showN;
+    $("moreBtn").textContent = `더 보기 (+${Math.min(STEP, rows.length - showN)}) ▾`;
+    $("lessBtn").hidden = showN <= PAGE;
+    document.querySelector(".table-scroll").classList.toggle("expanded", showN > PAGE);
     $("countNote").textContent = `조건에 맞는 ${rows.length}종목 중 ${shown.length}개 표시 · 배당 종목 ${all.length}개 / 전체 ${DATA[market].rows.length}개`;
     $("tableTitle").textContent = market === "kr" ? "한국 배당주 순위" : "미국 배당주 순위 (S&P 500)";
     renderTiles(all, rows);
@@ -445,7 +454,7 @@ dialog::backdrop{background:rgba(10,13,19,0.5);}
     }));
   }
   function syncFilters(){
-    $("fMinY").value = filt.minY; $("fMaxPo").value = filt.maxPo; $("fYears").value = filt.years;
+    $("fMinY").value = filt.minY; $("fMaxPo").value = filt.maxPo; $("fMinPo").value = filt.minPo ?? ""; $("fMinRoe").value = filt.minRoe ?? ""; $("fYears").value = filt.years;
     $("fQ").value = filt.q; $("fTrap").checked = filt.trap; $("fMkt").value = filt.mkt;
     const secs = [...new Set((DATA[market]?.rows || []).filter(r => r.y > 0).map(r => r.sec).filter(Boolean))].sort((a, b) => a.localeCompare(b, "ko"));
     if (!secs.includes(filt.sec)) filt.sec = "";
@@ -457,20 +466,25 @@ dialog::backdrop{background:rgba(10,13,19,0.5);}
   }
   function bindFilters(){
     const upd = () => {
-      filt = { minY:$("fMinY").value, maxPo:$("fMaxPo").value, years:$("fYears").value, sec:$("fSec").value,
+      filt = { minY:$("fMinY").value, minPo:$("fMinPo").value, maxPo:$("fMaxPo").value, minRoe:$("fMinRoe").value, years:$("fYears").value, sec:$("fSec").value,
                mkt:$("fMkt").value, ex:$("fEx").value, q:$("fQ").value, trap:$("fTrap").checked };
-      store.set("divFilter", { ...filt, q:"" }); showN = 50; render();
+      store.set("divFilter", { ...filt, q:"" }); showN = PAGE; render();
     };
-    ["fMinY","fMaxPo","fYears","fSec","fMkt","fEx","fQ","fTrap"].forEach(id => $(id).addEventListener(id === "fQ" ? "input" : "change", upd));
+    ["fMinY","fMinPo","fMaxPo","fMinRoe","fYears","fSec","fMkt","fEx","fQ","fTrap"].forEach(id => $(id).addEventListener(id === "fQ" ? "input" : "change", upd));
     $("resetBtn").addEventListener("click", () => {
       weights = Object.fromEntries(FACTORS.map(f => [f.k, f.w])); filt = { ...DEF_FILTER };
       store.set("divWeights", weights); store.set("divFilter", filt);
       renderWeights(); syncFilters(); render();
     });
-    $("moreBtn").addEventListener("click", () => { showN += 50; render(); });
+    $("moreBtn").addEventListener("click", () => { showN += STEP; render(); });
+    $("lessBtn").addEventListener("click", () => {
+      showN = PAGE; render();
+      const sc = document.querySelector(".table-scroll"); sc.scrollTop = 0;
+      sc.closest(".panel").scrollIntoView({ block:"start", behavior:"smooth" });
+    });
   }
   function setMarket(m){
-    market = m; showN = 50; sortKey = "score"; sortDir = -1;
+    market = m; showN = PAGE; sortKey = "score"; sortDir = -1;
     document.querySelectorAll(".tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.mkt === m)));
     if (location.hash !== "#" + m) history.replaceState(null, "", "#" + m);
     $("updated").textContent = `${m === "kr" ? "한국" : "미국"} 데이터 기준일 ${DATA[m]?.asOf || "–"} · 갱신 ${DATA.updated}`
