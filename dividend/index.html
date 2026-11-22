@@ -122,6 +122,8 @@ tbody tr:last-child td{border-bottom:none;}
 .tag.warn{background:var(--warning-soft);color:var(--warning);}
 .tag.bad{background:var(--critical-soft);color:var(--critical);}
 .tag.good{background:var(--accent-soft);color:var(--accent);}
+.ex-note{margin:12px 0 0;padding:10px 12px;border-radius:8px;background:var(--accent-soft);color:var(--ink-2);font-size:12.5px;line-height:1.6;}
+.ex-note[hidden]{display:none;}
 .more{margin-top:12px;display:flex;gap:10px;align-items:center;font-size:12.5px;color:var(--muted);}
 
 .guide{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 24px;font-size:13px;line-height:1.6;color:var(--ink-2);}
@@ -185,11 +187,12 @@ dialog::backdrop{background:rgba(10,13,19,0.5);}
       <label class="f-item" id="fYearsWrap"><span id="fYearsLabel">최소 연속 배당 연수</span><input type="number" id="fYears" step="1" min="0" value="0"></label>
       <label class="f-item">업종<select id="fSec"><option value="">전체</option></select></label>
       <label class="f-item" id="fMktWrap">시장<select id="fMkt"><option value="">전체</option><option>KOSPI</option><option>KOSDAQ</option></select></label>
-      <label class="f-item" id="fExWrap">배당락 일정<select id="fEx"><option value="">전체</option><option value="7">7일 이내</option><option value="14">14일 이내</option><option value="30">30일 이내</option><option value="60">60일 이내</option></select></label>
+      <label class="f-item" id="fExWrap">배당락 일정<select id="fEx"><option value="">전체</option><option value="w">매수 적기 (배당락 20~40거래일 전)</option><option value="7">7일 이내</option><option value="14">14일 이내</option><option value="30">30일 이내</option><option value="60">60일 이내</option></select></label>
       <label class="f-item">종목 검색<input type="search" id="fQ" placeholder="이름 또는 코드"></label>
       <label class="check"><input type="checkbox" id="fTrap" checked>배당 함정 의심 종목 빼기</label>
       <button class="btn" type="button" id="resetBtn">기본값으로</button>
     </div>
+    <p class="ex-note" id="exNote" hidden></p>
   </section>
 
   <section class="panel">
@@ -255,6 +258,17 @@ dialog::backdrop{background:rgba(10,13,19,0.5);}
   const FREQ = { 12:"월배당", 4:"분기", 2:"반기", 1:"연 1회" };
   const TODAY = (() => { const d = new Date(); return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()); })();
   const dayNum = s => s ? (Date.UTC(+s.slice(0,4), +s.slice(5,7) - 1, +s.slice(8,10)) - TODAY) / 864e5 : null;
+  // 오늘 이후 ~ 배당락일까지 평일 수 = "배당락 N거래일 전" (오늘 종가에 사면 N, 공휴일 미반영)
+  const bdaysTo = s => {
+    if (!s) return null;
+    const end = Date.UTC(+s.slice(0,4), +s.slice(5,7) - 1, +s.slice(8,10));
+    if (end <= TODAY) return end === TODAY ? 0 : -1;
+    let n = 0;
+    for (let t = TODAY + 864e5; t <= end; t += 864e5){ const w = new Date(t).getUTCDay(); if (w && w < 6) n++; }
+    return n;
+  };
+  const WIN_LO = 20, WIN_HI = 40;
+  const inWin = r => r.exBd != null && r.exBd >= WIN_LO && r.exBd <= WIN_HI;
   const md = s => `${+s.slice(5,7)}/${+s.slice(8,10)}`;
   const WD = "일월화수목금토";
   const mdw = s => `${md(s)}(${WD[new Date(s + "T00:00:00Z").getUTCDay()]})`;
@@ -323,6 +337,7 @@ dialog::backdrop{background:rgba(10,13,19,0.5);}
       r.vs = r.avgY ? (r.y / r.avgY - 1) * 100 : null;
       r._trap = isTrap(r);
       r.exDays = dayNum(r.nextEx);
+      r.exBd = bdaysTo(r.nextEx);
       r.nextY = r.nextAmt && r.p ? r.nextAmt / r.p * 100 : null;
     }
     return all;
@@ -336,7 +351,7 @@ dialog::backdrop{background:rgba(10,13,19,0.5);}
       && (r.years || 0) >= (+filt.years || 0)
       && (!filt.sec || r.sec === filt.sec)
       && (market !== "kr" || !filt.mkt || r.m === filt.mkt)
-      && (!filt.ex || (r.exDays != null && r.exDays >= 0 && r.exDays <= +filt.ex))
+      && (!filt.ex || (filt.ex === "w" ? inWin(r) : r.exDays != null && r.exDays >= 0 && r.exDays <= +filt.ex))
       && (!filt.trap || !r._trap)
       && (!q || r.n.toLowerCase().includes(q) || r.t.toLowerCase().includes(q)));
   }
@@ -382,12 +397,19 @@ dialog::backdrop{background:rgba(10,13,19,0.5);}
     if (r.exDays == null) return "–";
     if (r.exDays < 0) return `<span class="muted">${md(r.nextEx)} 지남</span>`;
     const soon = r.exDays <= 14;
-    return `<span class="${soon ? "y-main" : ""}">${r.exConfirmed ? `<span class="tag good">확정</span> ` : `<span class="tag">예상</span> `}${md(r.nextEx)} <span class="${soon ? "up" : "muted"}">D-${r.exDays}</span></span><span class="chg muted">${dayNum(r.buyBy) < 0 ? "매수 마감 지남" : md(r.buyBy) + "까지 매수"} · 1회 ${pct(r.nextY)}</span>`;
+    const bd = r.exBd > 0 ? ` · ${r.exBd}거래일 전` : "";
+    const win = inWin(r) ? `<span class="tag good">매수 적기</span> ` : "";
+    return `<span class="${soon ? "y-main" : ""}">${r.exConfirmed ? `<span class="tag good">확정</span> ` : `<span class="tag">예상</span> `}${md(r.nextEx)} <span class="${soon ? "up" : "muted"}">D-${r.exDays}</span></span><span class="chg muted">${win}${dayNum(r.buyBy) < 0 ? "매수 마감 지남" : md(r.buyBy) + "까지 매수"} · 1회 ${pct(r.nextY)}${bd}</span>`;
   }
   const poFmt = v => v == null ? "–" : v === -1 ? `<span class="down">적자</span>` : `<span class="${v > 100 ? "up" : ""}">${fmtN(v, 0)}%</span>`;
   function render(){
     const all = compute();
     const rows = filtered(all);
+    const note = $("exNote");
+    note.hidden = filt.ex !== "w";
+    if (!note.hidden) note.innerHTML = market === "kr"
+      ? `<b>매수 적기</b> = 다음 배당락까지 ${WIN_LO}~${WIN_HI}거래일(약 1~2달) 남은 종목. 2010~2026 백테스트에서 한국 고배당주는 이 구간에 사서 배당 받고 배당락일에 팔 때가 가장 좋았어요 (1회 배당 3%+: 40거래일 전 매수 평균 +5.8%·이익 74%, 20거래일 전 매수 시장 대비 +2.2%). 배당락 뒤까지 들고 있으면 오히려 불리했어요. 거래일은 주말만 빼고 셈(공휴일 미반영), '예상' 일정은 작년 기준 추정이라 공시로 확인하세요.`
+      : `<b>매수 적기</b> = 다음 배당락까지 ${WIN_LO}~${WIN_HI}거래일 남은 종목. 단, 미국은 백테스트에서 매수 시점에 따른 차이가 거의 없었어요(시장 대비 ±0.1%). 시점보다 종목 자체(점수·배당 안전성)를 보고 고르세요.`;
     const key = sortKey;
     rows.sort((a, b) => {
       let x = a[key], y = b[key];
