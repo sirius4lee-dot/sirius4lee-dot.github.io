@@ -1,0 +1,31 @@
+{
+ "rules": [
+  {
+   "id": "default-kr-window",
+   "name": "한국 매수 적기",
+   "market": "kr",
+   "mode": "new",
+   "filter": {
+    "minY": 3,
+    "minPo": "",
+    "maxPo": 100,
+    "minRoe": "",
+    "minVs": "",
+    "years": 0,
+    "sec": "",
+    "mkt": "",
+    "ex": "w",
+    "q": "",
+    "trap": true
+   },
+   "weights": {
+    "yield": 30,
+    "value": 20,
+    "growth": 15,
+    "safety": 15,
+    "roe": 10,
+    "streak": 10
+   }
+  }
+ ]
+}
