@@ -1268,8 +1268,8 @@ function initHaa(DATA){
       const same = (tip > 0) === (sig.mode === "offensive");
       box.hidden = false;
       box.innerHTML = `<strong>참고: 미국 원본(달러) 기준 ${VARIANTS[hs.variant].label.replace("S&P500", "SPY").replace("나스닥100", "QQQ")}</strong> — TIP 모멘텀 ${pctS(tip * 100, 2)} → ${tip > 0 ? "공격" : "방어"} (${hold}). ` +
-        (same ? "한국 계좌 신호와 모드가 같습니다." :
-         "<strong>한국 계좌 신호와 모드가 다릅니다.</strong> 국내 ETF는 원화 가격이라 환율 변화가 모멘텀에 섞입니다(환헤지 안 된 ETF는 원화 강세 때 수익률이 낮게 잡힘). 두 신호가 다를 때는 더 신중하게 판단하세요.") +
+        (same ? "카나리아가 같은 미국 TIP(달러)라 공격/방어 판단은 항상 같아요. 공격 종목 순위는 국내 ETF 원화 가격 기준이라 다를 수 있어요." :
+         "<strong>한국 계좌 신호와 모드가 다릅니다.</strong> 데이터 갱신 시점이 달라 생긴 차이일 수 있어요. 미국판을 확인하세요.") +
         ` <a href="../backtest/#haa">미국판 보기 →</a>`;
     } catch (e) { box.hidden = true; }
   }
@@ -1283,7 +1283,7 @@ function initHaa(DATA){
       <td>${x.code ? `<strong>${x.name}</strong>` : `<span class="nm">국내 상장 ETF 없음 (빈칸)</span>`}</td>
       <td class="mono">${x.code || ""}</td>
       <td class="nm">${x.index}</td>
-      <td>${x.code ? (x.hedged === "krw" ? "원화 자산(환율 무관)" : x.hedged ? "환헤지(H)" : "환노출") : ""}</td>
+      <td>${x.code ? (x.hedged === "usd" ? "달러 원본(신호만, 매매 안 함)" : x.hedged === "krw" ? "원화 자산(환율 무관)" : x.hedged ? "환헤지(H)" : "환노출") : ""}</td>
       <td class="mono">${x.code ? first(x.code) : ""}</td></tr>`).join("");
   }
 
