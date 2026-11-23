@@ -1,28 +1,28 @@
 {
  "rules": [
   {
-   "id": "default-kr-window",
-   "name": "한국 매수 적기",
+   "id": "rmwrm66lx",
+   "name": "배당 매수적기",
    "market": "kr",
    "mode": "new",
    "filter": {
-    "minY": 3,
+    "minY": "2",
     "minPo": "",
-    "maxPo": 100,
-    "minRoe": "",
-    "minVs": "",
-    "years": 0,
+    "maxPo": "90",
+    "minRoe": "10",
+    "minVs": "43",
+    "years": "3",
     "sec": "",
     "mkt": "",
-    "ex": "w",
+    "ex": "60",
     "q": "",
     "trap": true
    },
    "weights": {
-    "yield": 30,
-    "value": 20,
-    "growth": 15,
-    "safety": 15,
+    "yield": 35,
+    "value": 30,
+    "growth": 5,
+    "safety": 10,
     "roe": 10,
     "streak": 10
    }
