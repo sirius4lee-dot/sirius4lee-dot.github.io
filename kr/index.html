@@ -806,6 +806,12 @@ td.mono, th.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;
       <p class="panel-sub" id="flowsVkSub"></p>
       <svg class="credit-chart" id="flowsVk" role="img" aria-label="VKOSPI와 코스피 지수"></svg>
     </section>
+    <section class="panel">
+      <div class="chart-header"><h2>VKOSPI와 외국인 순매수</h2>
+        <div class="legend"><div class="legend-item"><span class="legend-swatch" style="background:var(--up)"></span>순매수</div><div class="legend-item"><span class="legend-swatch" style="background:var(--down)"></span>순매도 (왼쪽 축)</div><div class="legend-item"><span class="legend-swatch" style="background:var(--accent)"></span>VKOSPI (오른쪽 축)</div></div></div>
+      <p class="panel-sub" id="flowsVkFSub"></p>
+      <svg class="credit-chart" id="flowsVkF" role="img" aria-label="VKOSPI와 외국인 순매수 금액"></svg>
+    </section>
     <footer class="notes">
       <h3>데이터와 계산 방식</h3>
       <ul>
@@ -813,7 +819,8 @@ td.mono, th.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;
         <li><strong>주별·월별</strong> 막대는 그 주·그 달 거래일의 순매수 합계이고, 코스피는 그 기간 마지막 거래일 종가입니다.</li>
         <li><strong>누적 순매수</strong>는 선택한 기간의 첫 거래일부터 더해 간 값입니다. 오른쪽으로 올라가면 그 기간 동안 외국인이 계속 사 모은 것, 내려가면 계속 판 것입니다.</li>
         <li><strong>VKOSPI</strong>는 코스피200 옵션 가격으로 계산한 앞으로 30일 예상 변동성(연율, %)입니다. 미국 VIX의 한국판으로, 보통 15~20 근처이고 급락장에서 30~40 이상으로 뜁니다. 한국거래소(KRX) 정보데이터시스템 Open API에서 받습니다.</li>
-        <li><strong>갱신:</strong> 화~토 06:30(한국 시간) 미국 섹터 데일리와 같은 자동 실행에서 전 거래일까지 받아옵니다.</li>
+        <li><strong>VKOSPI와 외국인 순매수</strong> 그래프의 막대는 위 그래프와 같은 합산 단위(일·주·월)이고, VKOSPI는 그 기간 마지막 거래일 값입니다. 설명 줄의 "VKOSPI가 오른 날/내린 날 평균 순매수"는 선택한 기간의 일별 값으로 계산합니다.</li>
+        <li><strong>갱신:</strong> 화~토 06:30(한국 시간) 미국 섹터 데일리와 같은 자동 실행에서 전 거래일까지 받아옵니다. VKOSPI는 한국거래소 공개가 하루 늦어 가장 최근 하루는 다음 날 채워집니다.</li>
       </ul>
     </footer>
   </div>
@@ -1795,14 +1802,17 @@ async function initFlows(){
       rows.forEach((r, k) => { const v = r[key]; if (v == null) return;
         mk("rect", { x: x(k) - bw / 2, y: Math.min(y(v), y(0)), width: bw, height: Math.max(0.5, Math.abs(y(0) - y(v))), fill: v >= 0 ? "var(--up)" : "var(--down)", opacity: 0.75 }); });
     }
-    // 코스피 (오른쪽 축)
-    const iv = rows.map(r => r.kospi);
+    // 오른쪽 축 (기본 코스피, opts.right로 다른 값)
+    const RK = opts.right || "kospi", rc = opts.rightColor || (opts.bars ? "var(--ink-2)" : "var(--muted)");
+    const iv = rows.map(r => r[RK]).filter(v => v != null);
     let ilo = Math.min(...iv), ihi = Math.max(...iv); const ip = (ihi - ilo) * 0.08 || 1; ilo -= ip; ihi += ip;
     const yi = v => P.t + (1 - (v - ilo) / (ihi - ilo)) * (H - P.t - P.b);
     const istep = steps.find(s => (ihi - ilo) / s <= 5) || 1e6;
     for (let v = Math.ceil(ilo / istep) * istep; v <= ihi; v += istep)
       mk("text", { x: W - P.r + 6, y: yi(v) + 3.5, "text-anchor": "start", "font-size": 10.5, fill: "var(--muted)", "font-family": "var(--font-mono)" }).textContent = Math.round(v).toLocaleString("en-US");
-    mk("polyline", { points: rows.map((r, k) => `${x(k).toFixed(1)},${yi(r.kospi).toFixed(1)}`).join(" "), fill: "none", stroke: opts.bars ? "var(--ink-2)" : "var(--muted)", "stroke-width": opts.bars ? 1.6 : 1.4, opacity: 0.85, "stroke-linejoin": "round" });
+    { let d = "", pen = false;
+      rows.forEach((r, k) => { if (r[RK] == null){ pen = false; return; } d += (pen ? "L" : "M") + x(k).toFixed(1) + "," + yi(r[RK]).toFixed(1); pen = true; });
+      mk("path", { d, fill: "none", stroke: rc, "stroke-width": opts.rightColor ? 2 : (opts.bars ? 1.6 : 1.4), opacity: opts.rightColor ? 1 : 0.85, "stroke-linejoin": "round" }); }
     if (!opts.bars){
       let d = "", pen = false;
       rows.forEach((r, k) => { if (r[key] == null){ pen = false; return; } d += (pen ? "L" : "M") + x(k).toFixed(1) + "," + y(r[key]).toFixed(1); pen = true; });
@@ -1836,8 +1846,8 @@ async function initFlows(){
       d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7)); return d.toISOString().slice(0, 10); };
     const out = [];
     rows.forEach(r => { const k = key(r), o = out[out.length - 1];
-      if (o && o._k === k){ o.foreign += r.foreign; o.personal += r.personal || 0; o.institution += r.institution || 0; o.kospi = r.kospi; o.date = r.date; o.days++; }
-      else out.push({ _k: k, from: r.date, date: r.date, kospi: r.kospi, foreign: r.foreign, personal: r.personal || 0, institution: r.institution || 0, days: 1 }); });
+      if (o && o._k === k){ o.foreign += r.foreign; o.personal += r.personal || 0; o.institution += r.institution || 0; o.kospi = r.kospi; o.date = r.date; o.days++; if (r.vkospi != null) o.vkospi = r.vkospi; }
+      else out.push({ _k: k, from: r.date, date: r.date, kospi: r.kospi, vkospi: r.vkospi, foreign: r.foreign, personal: r.personal || 0, institution: r.institution || 0, days: 1 }); });
     out.forEach(o => o.label = unit === "m" ? o.from.slice(0, 4) + "년 " + +o.from.slice(4, 6) + "월" : fmtD(o.from) + " 주 (" + o.days + "거래일)");
     return out;
   }
@@ -1870,6 +1880,19 @@ async function initFlows(){
       const a = vv.reduce((m, r) => r.vkospi > m.vkospi ? r : m), b = vv.reduce((m, r) => r.vkospi < m.vkospi ? r : m);
       document.getElementById("flowsVkSub").textContent = `기간 최고 ${a.vkospi.toFixed(1)} (${fmtD(a.date)}) · 최저 ${b.vkospi.toFixed(1)} (${fmtD(b.date)}) · 지금 ${vl.vkospi.toFixed(2)} (${fmtD(vl.date)})`;
     } else document.getElementById("flowsVkSub").textContent = "VKOSPI는 한국거래소 Open API 인증키를 연결하면 표시됩니다.";
+    // VKOSPI와 외국인 순매수: 막대 = 외국인(합산 단위), 오른쪽 선 = VKOSPI
+    { const days = rows.filter((r, k) => k > 0 && r.vkospi != null && rows[k - 1].vkospi != null);
+      if (days.length > 5){
+        const dv = days.map(r => r.vkospi - rows[rows.indexOf(r) - 1].vkospi), fv = days.map(r => r.foreign);
+        const mean = a => a.reduce((p, q) => p + q, 0) / a.length;
+        const ma = mean(dv), mb = mean(fv);
+        const cov = dv.reduce((p, v, i) => p + (v - ma) * (fv[i] - mb), 0), sa = Math.sqrt(dv.reduce((p, v) => p + (v - ma) ** 2, 0)), sb = Math.sqrt(fv.reduce((p, v) => p + (v - mb) ** 2, 0));
+        const upF = fv.filter((v, i) => dv[i] > 0), dnF = fv.filter((v, i) => dv[i] < 0);
+        document.getElementById("flowsVkFSub").textContent =
+          `VKOSPI가 오른 날 외국인 평균 ${amt(mean(upF))} (${upF.length}일) · 내린 날 평균 ${amt(mean(dnF))} (${dnF.length}일) · 일별 상관계수 ${(cov / sa / sb).toFixed(2)} (VKOSPI 변화 vs 순매수, −1에 가까울수록 불안할 때 팔고 안정될 때 삼)`;
+      } else document.getElementById("flowsVkFSub").textContent = "VKOSPI 데이터가 부족합니다.";
+      draw("flowsVkF", bars, "foreign", { bars: true, axis: axisAmt, right: "vkospi", rightColor: "var(--accent)",
+        tipRows: r => [["외국인", amt(r.foreign)], ["VKOSPI", r.vkospi == null ? "–" : r.vkospi.toFixed(2)], ["코스피", r.kospi.toLocaleString("en-US")]] }); }
     draw("flowsVk", vrows, "vkospi", { axis: v => (+v.toFixed(1)) + "", empty: "VKOSPI 데이터 준비 중 (한국거래소 Open API 인증키 필요)",
       tipRows: r => [["VKOSPI", r.vkospi == null ? "–" : r.vkospi.toFixed(2)], ["코스피", r.kospi.toLocaleString("en-US")]] });
   }
