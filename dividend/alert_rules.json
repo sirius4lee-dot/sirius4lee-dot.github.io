@@ -1,10 +1,10 @@
 {
  "rules": [
   {
-   "id": "rmwrm66lx",
-   "name": "배당 매수적기",
+   "id": "rmwxe87hu",
+   "name": "배당 매수지표v1",
    "market": "kr",
-   "mode": "new",
+   "mode": "daily",
    "filter": {
     "minY": "2",
     "minPo": "",
