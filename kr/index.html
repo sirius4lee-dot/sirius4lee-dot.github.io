@@ -415,6 +415,7 @@ td.mono, th.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;
       <button type="button" role="tab" data-tab="rotation" aria-selected="true">ETF 모멘텀 로테이션</button>
       <button type="button" role="tab" data-tab="haa" aria-selected="false">HAA 자산배분 (한국 계좌)</button>
       <button type="button" role="tab" data-tab="credit" aria-selected="false">신용융자 잔고</button>
+      <button type="button" role="tab" data-tab="flows" aria-selected="false">외국인 수급</button>
     </div>
     <div class="links">
       <a class="crosslink" href="../backtest/">미국 백테스터 →</a>
@@ -753,6 +754,66 @@ td.mono, th.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums;
         <li><strong>신용거래융자만</strong> 봅니다. 주식을 빌려 파는 신용대주, 예탁증권담보융자(보유 주식 담보 대출)는 빠져 있습니다.</li>
         <li><strong>반대매매</strong>는 협회 증시자금 추이의 "위탁매매 미수금 대비 실제 반대매매 금액"이며 시장 구분 없는 합계입니다. 신용융자 담보 부족에 따른 반대매매는 이 숫자에 포함되지 않습니다.</li>
         <li><strong>갱신:</strong> 화~토 06:30(한국 시간) 미국 섹터 데일리와 같은 자동 실행에서 받아옵니다. 협회 공개가 늦어 보통 1~2 거래일 전 값까지 나옵니다.</li>
+      </ul>
+    </footer>
+  </div>
+
+  <div class="tab-pane" id="pane-flows" hidden>
+    <header class="hero">
+      <div class="eyebrow">코스피 · 외국인 순매수 금액 · VKOSPI · 매일 갱신</div>
+      <h1>외국인 수급</h1>
+      <p>코스피 시장에서 외국인이 하루에 산 금액에서 판 금액을 뺀 <strong>순매수 금액</strong>을 코스피 지수와 함께 그립니다. 빨강은 순매수(사들임), 파랑은 순매도(팔아치움)입니다. 아래에는 시장의 불안 정도를 보여 주는 <strong>VKOSPI</strong>(코스피200 변동성 지수)를 함께 둡니다. 매일 아침 자동 갱신됩니다.</p>
+    </header>
+    <div class="credit-err" id="flowsErr" hidden></div>
+    <section class="stats-row" id="flowsTiles" aria-label="최근 외국인 수급"></section>
+    <section class="panel controls" aria-label="기간 선택">
+      <div class="control-row">
+        <div class="control-group">
+          <label>기간</label>
+          <div class="segmented" id="flowsRange" role="group">
+            <button type="button" data-value="3">3개월</button>
+            <button type="button" data-value="6">6개월</button>
+            <button type="button" data-value="12" class="active">1년</button>
+            <button type="button" data-value="36">3년</button>
+            <button type="button" data-value="0">전체 (2016~)</button>
+          </div>
+        </div>
+        <div class="control-group">
+          <label>막대 합산 단위</label>
+          <div class="segmented" id="flowsAgg" role="group">
+            <button type="button" data-value="d" class="active">일별</button>
+            <button type="button" data-value="w">주별</button>
+            <button type="button" data-value="m">월별</button>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="panel">
+      <div class="chart-header"><h2>외국인 순매수 금액과 코스피</h2>
+        <div class="legend"><div class="legend-item"><span class="legend-swatch" style="background:var(--up)"></span>순매수</div><div class="legend-item"><span class="legend-swatch" style="background:var(--down)"></span>순매도 (왼쪽 축)</div><div class="legend-item"><span class="legend-swatch" style="background:var(--ink-2)"></span>코스피 지수 (오른쪽 축)</div></div></div>
+      <p class="panel-sub" id="flowsBarSub"></p>
+      <svg class="credit-chart" id="flowsBar" role="img" aria-label="외국인 순매수 금액과 코스피 지수"></svg>
+    </section>
+    <section class="panel">
+      <div class="chart-header"><h2>외국인 누적 순매수</h2>
+        <div class="legend"><div class="legend-item"><span class="legend-swatch" style="background:var(--cat-1)"></span>기간 첫날부터 누적 (왼쪽 축, 조원)</div><div class="legend-item"><span class="legend-swatch" style="background:var(--muted)"></span>코스피 지수 (오른쪽 축)</div></div></div>
+      <p class="panel-sub" id="flowsCumSub"></p>
+      <svg class="credit-chart" id="flowsCum" role="img" aria-label="외국인 누적 순매수와 코스피 지수"></svg>
+    </section>
+    <section class="panel">
+      <div class="chart-header"><h2>VKOSPI (코스피200 변동성 지수)</h2>
+        <div class="legend"><div class="legend-item"><span class="legend-swatch" style="background:var(--cat-1)"></span>VKOSPI (왼쪽 축)</div><div class="legend-item"><span class="legend-swatch" style="background:var(--muted)"></span>코스피 지수 (오른쪽 축)</div></div></div>
+      <p class="panel-sub" id="flowsVkSub"></p>
+      <svg class="credit-chart" id="flowsVk" role="img" aria-label="VKOSPI와 코스피 지수"></svg>
+    </section>
+    <footer class="notes">
+      <h3>데이터와 계산 방식</h3>
+      <ul>
+        <li><strong>외국인 순매수</strong> = 코스피(유가증권) 시장에서 외국인의 매수 금액 − 매도 금액, 단위 억원 (1조 = 10,000억). 네이버페이 증권 투자자별 매매동향(거래소 집계) 기준이며 코스닥은 포함하지 않습니다.</li>
+        <li><strong>주별·월별</strong> 막대는 그 주·그 달 거래일의 순매수 합계이고, 코스피는 그 기간 마지막 거래일 종가입니다.</li>
+        <li><strong>누적 순매수</strong>는 선택한 기간의 첫 거래일부터 더해 간 값입니다. 오른쪽으로 올라가면 그 기간 동안 외국인이 계속 사 모은 것, 내려가면 계속 판 것입니다.</li>
+        <li><strong>VKOSPI</strong>는 코스피200 옵션 가격으로 계산한 앞으로 30일 예상 변동성(연율, %)입니다. 미국 VIX의 한국판으로, 보통 15~20 근처이고 급락장에서 30~40 이상으로 뜁니다. 한국거래소(KRX) 정보데이터시스템 Open API에서 받습니다.</li>
+        <li><strong>갱신:</strong> 화~토 06:30(한국 시간) 미국 섹터 데일리와 같은 자동 실행에서 전 거래일까지 받아옵니다.</li>
       </ul>
     </footer>
   </div>
@@ -1665,7 +1726,164 @@ async function initCredit(){
   ensure();
 }
 
-const TABS = ["rotation", "haa", "credit"];
+// ---------- 외국인 수급 (flows.json, 매일 갱신) ----------
+async function initFlows(){
+  let F;
+  try { F = await (await fetch("flows.json", { cache: "no-store" })).json(); }
+  catch (e) {
+    const box = document.getElementById("flowsErr");
+    box.hidden = false; box.textContent = "외국인 수급 데이터를 불러오지 못했습니다: " + e.message;
+    return;
+  }
+  const ALL = F.rows.map(r => Object.fromEntries(F.cols.map((c, j) => [c, r[j]]))).filter(r => r.kospi != null);
+  const R = ALL.filter(r => r.foreign != null);
+  const fmtD = d => d.slice(0, 4) + "." + d.slice(4, 6) + "." + d.slice(6, 8);
+  const eok = v => (v >= 0 ? "+" : "−") + Math.abs(Math.round(v)).toLocaleString("ko-KR") + "억";
+  const jo = v => (v >= 0 ? "+" : "−") + (Math.abs(v) / 10000).toFixed(2) + "조";
+  const amt = v => Math.abs(v) >= 10000 ? jo(v) : eok(v);
+  const tip = document.getElementById("floatTip");
+  const last = R[R.length - 1];
+  const sum = rows => rows.reduce((a, r) => a + r.foreign, 0);
+  const ytd = R.filter(r => r.date.slice(0, 4) === last.date.slice(0, 4));
+  const vks = ALL.filter(r => r.vkospi != null);
+  const vl = vks[vks.length - 1];
+  const cls = v => v >= 0 ? "ret-up" : "ret-down";
+  document.getElementById("flowsTiles").innerHTML =
+    `<div class="stat-tile"><span class="label">외국인 순매수 (${fmtD(last.date).slice(5)})</span><span class="value ${cls(last.foreign)}">${amt(last.foreign)}</span>
+      <span class="sub">개인 ${amt(last.personal)} · 기관 ${amt(last.institution)}</span><span class="sub">코스피 ${last.kospi.toLocaleString("en-US")}</span></div>` +
+    `<div class="stat-tile"><span class="label">최근 5거래일 합계</span><span class="value ${cls(sum(R.slice(-5)))}">${amt(sum(R.slice(-5)))}</span>
+      <span class="sub">최근 20거래일 ${amt(sum(R.slice(-20)))}</span><span class="sub">최근 60거래일 ${amt(sum(R.slice(-60)))}</span></div>` +
+    `<div class="stat-tile"><span class="label">${last.date.slice(0, 4)}년 누적</span><span class="value ${cls(sum(ytd))}">${jo(sum(ytd))}</span>
+      <span class="sub">${ytd.length}거래일 · 순매수한 날 ${ytd.filter(r => r.foreign > 0).length}일</span><span class="sub">갱신 ${F.updated}</span></div>` +
+    (vl ? `<div class="stat-tile"><span class="label">VKOSPI (${fmtD(vl.date).slice(5)})</span><span class="value">${vl.vkospi.toFixed(2)}</span>
+      <span class="sub">최근 1년 범위 ${Math.min(...vks.slice(-250).map(r => r.vkospi)).toFixed(1)}~${Math.max(...vks.slice(-250).map(r => r.vkospi)).toFixed(1)}</span><span class="sub">높을수록 시장 불안</span></div>`
+        : `<div class="stat-tile"><span class="label">VKOSPI</span><span class="value">–</span><span class="sub">한국거래소 Open API 인증키 연결 후 표시</span></div>`);
+
+  const ns = "http://www.w3.org/2000/svg";
+  const steps = [0.01, 0.02, 0.05, 0.1, 0.2, 0.25, 0.5, 1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 2500, 5000, 10000, 20000, 25000, 50000, 100000, 200000, 500000];
+  function draw(svgId, rows, key, opts){
+    const svg = document.getElementById(svgId);
+    svg.innerHTML = "";
+    const W = Math.max(320, svg.clientWidth || 960), H = svg.clientHeight || 280;
+    const P = { t: 12, r: 54, b: 24, l: 58 };
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    const mk = (tag, a) => { const e = document.createElementNS(ns, tag); for (const k in a) e.setAttribute(k, a[k]); svg.appendChild(e); return e; };
+    const n = rows.length, x = k => P.l + (n === 1 ? 0 : k / (n - 1)) * (W - P.l - P.r);
+    const vals = rows.map(r => r[key]).filter(v => v != null);
+    if (!vals.length){ mk("text", { x: W / 2, y: H / 2, "text-anchor": "middle", "font-size": 13, fill: "var(--muted)" }).textContent = opts.empty || "데이터 없음"; return; }
+    let lo = opts.bars || opts.zero ? Math.min(0, ...vals) : Math.min(...vals), hi = opts.bars || opts.zero ? Math.max(0, ...vals) : Math.max(...vals);
+    const pad = (hi - lo) * 0.08 || 1; lo -= pad; hi += pad;
+    const y = v => P.t + (1 - (v - lo) / (hi - lo)) * (H - P.t - P.b);
+    const step = steps.find(s => (hi - lo) / s <= 5) || 1e6;
+    for (let v = Math.ceil(lo / step) * step; v <= hi; v += step){
+      const zero = Math.abs(v) < 1e-9 && (opts.bars || opts.zero);
+      mk("line", { x1: P.l, x2: W - P.r, y1: y(v), y2: y(v), stroke: zero ? "var(--border-strong)" : "var(--border)", "stroke-width": zero ? 1.5 : 1 });
+      mk("text", { x: P.l - 6, y: y(v) + 3.5, "text-anchor": "end", "font-size": 10.5, fill: "var(--muted)", "font-family": "var(--font-mono)" }).textContent = opts.axis(v);
+    }
+    const span = n > 400 || rows[n - 1].date.slice(0, 4) - rows[0].date.slice(0, 4) >= 3 ? "year" : "month";
+    let lastLbl = "", every = span === "month" ? Math.max(1, Math.ceil((+rows[n - 1].date.slice(0, 4) * 12 + +rows[n - 1].date.slice(4, 6) - (+rows[0].date.slice(0, 4) * 12 + +rows[0].date.slice(4, 6))) / 7)) : 1, cnt = 0;
+    rows.forEach((r, k) => {
+      const lbl = span === "year" ? r.date.slice(0, 4) : r.date.slice(0, 6);
+      if (lbl !== lastLbl){
+        if (lastLbl && cnt++ % every === 0)
+          mk("text", { x: x(k), y: H - 6, "text-anchor": "middle", "font-size": 10.5, fill: "var(--muted)", "font-family": "var(--font-mono)" }).textContent = span === "year" ? lbl : lbl.slice(2, 4) + "." + lbl.slice(4, 6);
+        lastLbl = lbl;
+      }
+    });
+    if (opts.bars){
+      const bw = Math.max(1, (W - P.l - P.r) / n - (n > 200 ? 0 : 1));
+      rows.forEach((r, k) => { const v = r[key]; if (v == null) return;
+        mk("rect", { x: x(k) - bw / 2, y: Math.min(y(v), y(0)), width: bw, height: Math.max(0.5, Math.abs(y(0) - y(v))), fill: v >= 0 ? "var(--up)" : "var(--down)", opacity: 0.75 }); });
+    }
+    // 코스피 (오른쪽 축)
+    const iv = rows.map(r => r.kospi);
+    let ilo = Math.min(...iv), ihi = Math.max(...iv); const ip = (ihi - ilo) * 0.08 || 1; ilo -= ip; ihi += ip;
+    const yi = v => P.t + (1 - (v - ilo) / (ihi - ilo)) * (H - P.t - P.b);
+    const istep = steps.find(s => (ihi - ilo) / s <= 5) || 1e6;
+    for (let v = Math.ceil(ilo / istep) * istep; v <= ihi; v += istep)
+      mk("text", { x: W - P.r + 6, y: yi(v) + 3.5, "text-anchor": "start", "font-size": 10.5, fill: "var(--muted)", "font-family": "var(--font-mono)" }).textContent = Math.round(v).toLocaleString("en-US");
+    mk("polyline", { points: rows.map((r, k) => `${x(k).toFixed(1)},${yi(r.kospi).toFixed(1)}`).join(" "), fill: "none", stroke: opts.bars ? "var(--ink-2)" : "var(--muted)", "stroke-width": opts.bars ? 1.6 : 1.4, opacity: 0.85, "stroke-linejoin": "round" });
+    if (!opts.bars){
+      let d = "", pen = false;
+      rows.forEach((r, k) => { if (r[key] == null){ pen = false; return; } d += (pen ? "L" : "M") + x(k).toFixed(1) + "," + y(r[key]).toFixed(1); pen = true; });
+      mk("path", { d, fill: "none", stroke: "var(--cat-1)", "stroke-width": 2.2, "stroke-linejoin": "round" });
+      const lk = rows.map(r => r[key]).lastIndexOf(vals[vals.length - 1]);
+      mk("circle", { cx: x(lk), cy: y(rows[lk][key]), r: 4, fill: "var(--cat-1)", stroke: "var(--surface)", "stroke-width": 1.5 });
+    }
+    const vline = mk("line", { y1: P.t, y2: H - P.b, stroke: "var(--muted)", "stroke-width": 1, "stroke-dasharray": "3,3", visibility: "hidden" });
+    function move(evt){
+      const rect = svg.getBoundingClientRect(), pt = evt.touches ? evt.touches[0] : evt;
+      const k = Math.max(0, Math.min(n - 1, Math.round(((pt.clientX - rect.left) / rect.width * W - P.l) / (W - P.l - P.r) * (n - 1))));
+      const r = rows[k];
+      vline.setAttribute("x1", x(k)); vline.setAttribute("x2", x(k)); vline.setAttribute("visibility", "visible");
+      tip.innerHTML = `<div class="tt-date">${r.label || fmtD(r.date)}</div>` + opts.tipRows(r).map(([a, b]) => `<div class="tt-row"><span class="k">${a}</span><span>${b}</span></div>`).join("");
+      tip.hidden = false;
+      const tw = tip.offsetWidth, th = tip.offsetHeight;
+      let tx = pt.clientX + 16, ty = pt.clientY + 16;
+      if (tx + tw > window.innerWidth - 8) tx = pt.clientX - tw - 16;
+      if (ty + th > window.innerHeight - 8) ty = pt.clientY - th - 16;
+      tip.style.left = Math.max(8, tx) + "px"; tip.style.top = Math.max(8, ty) + "px";
+    }
+    function leave(){ vline.setAttribute("visibility", "hidden"); tip.hidden = true; }
+    svg.onmousemove = move; svg.onmouseleave = leave; svg.ontouchmove = move; svg.ontouchend = leave;
+  }
+
+  // 주별(월~금, 그 주 월요일 기준)·월별 합산
+  function aggregate(rows, unit){
+    if (unit === "d") return rows;
+    const key = r => { if (unit === "m") return r.date.slice(0, 6);
+      const d = new Date(Date.UTC(+r.date.slice(0, 4), +r.date.slice(4, 6) - 1, +r.date.slice(6, 8)));
+      d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7)); return d.toISOString().slice(0, 10); };
+    const out = [];
+    rows.forEach(r => { const k = key(r), o = out[out.length - 1];
+      if (o && o._k === k){ o.foreign += r.foreign; o.personal += r.personal || 0; o.institution += r.institution || 0; o.kospi = r.kospi; o.date = r.date; o.days++; }
+      else out.push({ _k: k, from: r.date, date: r.date, kospi: r.kospi, foreign: r.foreign, personal: r.personal || 0, institution: r.institution || 0, days: 1 }); });
+    out.forEach(o => o.label = unit === "m" ? o.from.slice(0, 4) + "년 " + +o.from.slice(4, 6) + "월" : fmtD(o.from) + " 주 (" + o.days + "거래일)");
+    return out;
+  }
+
+  let months = 12, agg = "d";
+  function render(){
+    document.querySelectorAll("#flowsRange button").forEach(b => b.classList.toggle("active", +b.dataset.value === months));
+    document.querySelectorAll("#flowsAgg button").forEach(b => b.classList.toggle("active", b.dataset.value === agg));
+    let from = R[0].date;
+    if (months){ const t = new Date(+last.date.slice(0, 4), +last.date.slice(4, 6) - 1 - months, +last.date.slice(6, 8));
+      from = t.getFullYear() + String(t.getMonth() + 1).padStart(2, "0") + String(t.getDate()).padStart(2, "0"); }
+    const rows = R.filter(r => r.date >= from);
+    const bars = aggregate(rows, agg);
+    const tot = sum(rows), mx = bars.reduce((a, r) => r.foreign > a.foreign ? r : a), mn = bars.reduce((a, r) => r.foreign < a.foreign ? r : a);
+    const unitL = { d: "하루", w: "한 주", m: "한 달" }[agg];
+    document.getElementById("flowsBarSub").textContent =
+      `${fmtD(rows[0].date)} ~ ${fmtD(last.date)} · 기간 합계 ${amt(tot)} · ${unitL} 최대 순매수 ${amt(mx.foreign)} (${mx.label || fmtD(mx.date)}) · 최대 순매도 ${amt(mn.foreign)} (${mn.label || fmtD(mn.date)})`;
+    const axisAmt = v => Math.abs(v) >= 10000 ? (+(v / 10000).toFixed(1)) + "조" : Math.round(v).toLocaleString("ko-KR") + "억";
+    draw("flowsBar", bars, "foreign", { bars: true, axis: axisAmt,
+      tipRows: r => [["외국인", amt(r.foreign)], ["개인", amt(r.personal)], ["기관", amt(r.institution)], ["코스피", r.kospi.toLocaleString("en-US")]] });
+    let c = 0; const cum = rows.map(r => ({ ...r, cum: (c += r.foreign) / 10000 }));
+    const cmx = cum.reduce((a, r) => r.cum > a.cum ? r : a), cmn = cum.reduce((a, r) => r.cum < a.cum ? r : a);
+    document.getElementById("flowsCumSub").textContent =
+      `기간 첫날부터 누적 · 지금 ${jo(tot)} · 가장 많이 사 모았을 때 ${jo(cmx.cum * 10000)} (${fmtD(cmx.date)}) · 가장 많이 팔았을 때 ${jo(cmn.cum * 10000)} (${fmtD(cmn.date)})`;
+    draw("flowsCum", cum, "cum", { zero: true, axis: v => (+v.toFixed(1)) + "조",
+      tipRows: r => [["누적 순매수", jo(r.cum * 10000)], ["그날 순매수", amt(r.foreign)], ["코스피", r.kospi.toLocaleString("en-US")]] });
+    const vrows = ALL.filter(r => r.date >= from);
+    const vv = vrows.filter(r => r.vkospi != null);
+    if (vv.length){
+      const a = vv.reduce((m, r) => r.vkospi > m.vkospi ? r : m), b = vv.reduce((m, r) => r.vkospi < m.vkospi ? r : m);
+      document.getElementById("flowsVkSub").textContent = `기간 최고 ${a.vkospi.toFixed(1)} (${fmtD(a.date)}) · 최저 ${b.vkospi.toFixed(1)} (${fmtD(b.date)}) · 지금 ${vl.vkospi.toFixed(2)} (${fmtD(vl.date)})`;
+    } else document.getElementById("flowsVkSub").textContent = "VKOSPI는 한국거래소 Open API 인증키를 연결하면 표시됩니다.";
+    draw("flowsVk", vrows, "vkospi", { axis: v => (+v.toFixed(1)) + "", empty: "VKOSPI 데이터 준비 중 (한국거래소 Open API 인증키 필요)",
+      tipRows: r => [["VKOSPI", r.vkospi == null ? "–" : r.vkospi.toFixed(2)], ["코스피", r.kospi.toLocaleString("en-US")]] });
+  }
+  document.querySelectorAll("#flowsRange button").forEach(b => b.addEventListener("click", () => { months = +b.dataset.value; render(); }));
+  document.querySelectorAll("#flowsAgg button").forEach(b => b.addEventListener("click", () => { agg = b.dataset.value; render(); }));
+  let drawn = false;
+  const ensure = () => { if (!document.getElementById("pane-flows").hidden && !drawn){ drawn = true; render(); } };
+  window.addEventListener("resize", () => { if (drawn && !document.getElementById("pane-flows").hidden) render(); });
+  document.querySelectorAll(".tabs button[data-tab]").forEach(b => b.addEventListener("click", () => setTimeout(ensure, 0)));
+  window.addEventListener("hashchange", () => setTimeout(ensure, 0));
+  ensure();
+}
+
+const TABS = ["rotation", "haa", "credit", "flows"];
 function showTab(name){
   document.querySelectorAll(".tabs button[data-tab]").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === name)));
   TABS.forEach(t => document.getElementById("pane-" + t).hidden = t !== name);
@@ -1691,6 +1909,7 @@ async function main(){
   showTab(TABS.includes(tab) ? tab : "rotation");
   window.addEventListener("hashchange", () => { const t = location.hash.slice(1); if (TABS.includes(t)) showTab(t); });
   initCredit();
+  initFlows();
 }
 main().catch(e => {
   document.getElementById("updatedAt").innerHTML = '<span class="load-error">데이터를 불러오지 못했습니다: ' + e.message + '</span>';
